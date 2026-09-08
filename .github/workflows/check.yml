@@ -23,6 +23,20 @@ jobs:
       - run: npm test
       - run: npm ci --prefix example
       - run: npm run typecheck --prefix example
+      - name: Resolve iOS preview runtime
+        working-directory: example
+        run: |
+          mkdir -p ../work
+          node node_modules/expo-updates/bin/cli.js runtimeversion:resolve --platform ios > ../work/ios-runtime.json
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const { runtimeVersion, workflow } = JSON.parse(fs.readFileSync('../work/ios-runtime.json', 'utf8'));
+          if (!runtimeVersion || workflow !== 'managed') {
+            throw new Error('Drafts Lab must resolve a managed iOS runtime from a clean checkout.');
+          }
+          console.log(`iOS preview runtime: ${runtimeVersion}`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `iOS preview runtime: \`${runtimeVersion}\`\n`);
+          NODE
 
   ios-cache:
     runs-on: macos-latest
