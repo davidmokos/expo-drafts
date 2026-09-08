@@ -106,4 +106,4 @@ jobs:
       - name: Show catalog URL
         env:
           REPOSITORY: ${{ github.repository }}
-        run: echo "Catalog https://raw.githubusercontent.com/$REPOSITORY/drafts-catalog/catalog.json" >> "$GITHUB_STEP_SUMMARY"
+        run: echo "Catalog https://api.github.com/repos/$REPOSITORY/contents/catalog.json?ref=drafts-catalog" >> "$GITHUB_STEP_SUMMARY"
