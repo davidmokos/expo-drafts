@@ -83,15 +83,15 @@ final class ExpoDraftsManager {
       completion(.failure(DraftsError.message("The build is missing its EAS project ID. Configure expo-drafts and create a new build.")))
       return
     }
-    // GitHub's raw CDN can retain the old branch head despite a cache-bypassing
-    // URLSession policy. Give explicit refreshes a unique CDN cache key.
+    // GitHub caches anonymous Contents API responses. Explicit refreshes need a
+    // unique cache key; arbitrary catalog endpoints retain their original URLs.
     var requestURL = url
-    if url.host == "raw.githubusercontent.com", var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+    if url.host == "api.github.com", var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
       components.queryItems = (components.queryItems ?? []) + [URLQueryItem(name: "expo-drafts-refresh", value: UUID().uuidString)]
       requestURL = components.url ?? url
     }
     var request = URLRequest(url: requestURL, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 25)
-    request.setValue("application/json", forHTTPHeaderField: "Accept")
+    request.setValue(url.host == "api.github.com" ? "application/vnd.github.raw+json" : "application/json", forHTTPHeaderField: "Accept")
     let expectedProjectID = projectID
     catalogTask = URLSession.shared.dataTask(with: request) { data, response, error in
       if (error as NSError?)?.code == NSURLErrorCancelled { return }

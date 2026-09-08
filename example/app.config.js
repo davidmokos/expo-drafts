@@ -7,7 +7,7 @@ module.exports = ({ config }) => ({
       '../app.plugin.js',
       {
         catalogUrl:
-          'https://raw.githubusercontent.com/davidmokos/expo-drafts/drafts-catalog/catalog.json',
+          'https://api.github.com/repos/davidmokos/expo-drafts/contents/catalog.json?ref=drafts-catalog',
         buildUrl: 'https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds',
         channel: 'drafts',
       },

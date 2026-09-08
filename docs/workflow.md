@@ -23,12 +23,12 @@ The workflow skips fork PRs because they cannot use the Expo secret. It does not
 The catalog job merges the new entry into `catalog.json` on the `drafts-catalog` branch. With a public repository, the app fetches it from:
 
 ```text
-https://raw.githubusercontent.com/davidmokos/expo-drafts/drafts-catalog/catalog.json
+https://api.github.com/repos/davidmokos/expo-drafts/contents/catalog.json?ref=drafts-catalog
 ```
 
 Only selected metadata is published. The catalog contains no Expo or GitHub access token, manifest permalink, or EAS account session. The Expo token remains in GitHub Actions. Titles, update messages, PR URLs, commit hashes, and runtime versions in this public catalog are visible to anyone who can access the URL. For a private app, host the same JSON behind your own authenticated endpoint and use your app's access control.
 
-GitHub's raw file CDN can briefly return the previous catalog. Use the app's refresh control after publishing. An outdated catalog cannot bypass the runtime or fetched-ID checks.
+The sample uses GitHub's Contents API with the raw JSON media type and fresh request keys because the raw-file CDN can retain an older branch head. Anonymous API requests are limited per IP; host the same JSON on your own HTTPS endpoint for larger teams. Use the app's refresh control after publishing. An outdated catalog cannot bypass the runtime or fetched-ID checks.
 
 PR publish jobs run concurrently. Jobs for the same PR cancel obsolete runs. Each catalog writer reads the current branch, merges by channel and EAS publication time, then makes a normal Git push. If another writer wins the race, the losing writer fetches and merges again. It never force-pushes, and a late job for an older publication cannot replace a newer publication. A single shared GitHub concurrency group is intentionally avoided because GitHub's default concurrency behavior can [replace pending jobs](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#concurrency).
 

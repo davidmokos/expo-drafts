@@ -36,7 +36,7 @@ export default {
     extra: { eas: { projectId: 'YOUR_EAS_PROJECT_UUID' } },
     plugins: [
       ['expo-drafts', {
-        catalogUrl: 'https://raw.githubusercontent.com/OWNER/REPO/drafts-catalog/catalog.json',
+        catalogUrl: 'https://api.github.com/repos/OWNER/REPO/contents/catalog.json?ref=drafts-catalog',
         buildUrl: 'https://expo.dev/accounts/OWNER/projects/SLUG/builds',
         channel: 'drafts',
       }],
@@ -97,7 +97,7 @@ npx expo-drafts catalog \
   --channel draft-search --name 'Search redesign'
 ```
 
-Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to retain other channels. The catalog contains preview names, commit IDs, runtime versions, and update IDs. For private project metadata, serve it through your own access-controlled endpoint and add an authentication integration before use. The included GitHub raw catalog is public.
+Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to retain other channels. The catalog contains preview names, commit IDs, runtime versions, and update IDs. For private project metadata, serve it through your own access-controlled endpoint and add an authentication integration before use. The included GitHub catalog is public. GitHub limits anonymous API requests per IP; use your own HTTPS endpoint for larger testing teams.
 
 ## Test app
 
