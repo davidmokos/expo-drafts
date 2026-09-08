@@ -6,11 +6,13 @@ This version targets iOS. The picker runs in UIKit, outside the React bundle, an
 
 ## How drafts work
 
-Each PR publishes to a channel such as `draft-pr-42`. The app shows the PR title, channel, commit, and latest publication. A catalog generated in CI contains the platform update IDs and runtime versions. Expo credentials stay in CI.
+Each PR publishes to a channel such as `draft-pr-42`. The picker shows the preview name and PR number, with a checkmark on the current update. Manually named previews show their channel as the subtitle. A catalog generated in CI contains the commit, platform update IDs, and runtime versions. Expo credentials stay in CI.
+
+The picker uses standard UIKit inset grouped rows, search, a Done button, and pull to refresh. It follows the system's light or dark appearance. Its draggable floating button uses the system glass style on iOS 26 and later, with a tinted button on earlier versions.
 
 Only the latest publication on each channel is listed. Publishing again updates that entry. For separate named experiments, use distinct channels such as `draft-search-redesign` or `draft-checkout-agent-a`.
 
-A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible with **Needs new EAS build** and a link to EAS builds. The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
+A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible with **Requires a different build**, and **Find a Compatible Build** opens EAS builds. The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
 
 Selecting a draft changes the native `expo-channel-name` header, downloads the update, verifies its exact ID, and reloads. This also supports switching back to an older update on another channel. If the channel changed after the catalog loaded, the picker restores the previous channel and asks you to refresh.
 
@@ -101,6 +103,8 @@ Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to 
 ## Test app
 
 `example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker uses this repository's catalog. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
+
+The current native picker revision uses runtime `4b251db3e96d71fbcd20d1be7d63ddf929309765`. All four example PRs have been republished through EAS Workflows for that runtime. The original manual Amber, Ocean, and Camera experiment entries remain in the catalog and require a different build. See the [validation record](docs/ios-validation.md#current-native-picker-and-publications) for exact update IDs and workflow results.
 
 ```sh
 npm ci
