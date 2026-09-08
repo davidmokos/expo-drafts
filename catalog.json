@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-08T22:09:47.877Z",
+  "generatedAt": "2026-09-08T22:10:07.727Z",
   "drafts": [
+    {
+      "id": "b9947315-91fe-4999-95d5-5577d13a60db",
+      "name": "[example] Color studio",
+      "channel": "draft-pr-4",
+      "branch": "draft-pr-4",
+      "message": "[example] Color studio",
+      "createdAt": "2026-09-08T22:09:43.219Z",
+      "gitCommitHash": "74c67d2eb487b27cea812a2c0d7eec4bade050f6",
+      "pullRequest": {
+        "number": 4,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/4"
+      },
+      "updates": [
+        {
+          "id": "01a08311-e533-7f04-aea2-5627a3acd506",
+          "groupId": "b9947315-91fe-4999-95d5-5577d13a60db",
+          "platform": "ios",
+          "runtimeVersion": "4b251db3e96d71fbcd20d1be7d63ddf929309765"
+        }
+      ]
+    },
     {
       "id": "791612a3-eafb-4522-a32f-e273aebaed3d",
       "name": "[example] Focus timer",
@@ -63,27 +84,6 @@
           "groupId": "c135af2b-d04b-456a-9936-f6369f1d3786",
           "platform": "ios",
           "runtimeVersion": "4b251db3e96d71fbcd20d1be7d63ddf929309765"
-        }
-      ]
-    },
-    {
-      "id": "6beb1d66-742b-4ef6-9952-2da32b4b9585",
-      "name": "[example] Color studio",
-      "channel": "draft-pr-4",
-      "branch": "draft-pr-4",
-      "message": "[example] Color studio",
-      "createdAt": "2026-09-08T20:56:06.812Z",
-      "gitCommitHash": "aaa9c894db8b57f302c05d824cf0193d3e626c80",
-      "pullRequest": {
-        "number": 4,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/4"
-      },
-      "updates": [
-        {
-          "id": "01a082ce-819c-70a7-9b38-7c776c99a4a1",
-          "groupId": "6beb1d66-742b-4ef6-9952-2da32b4b9585",
-          "platform": "ios",
-          "runtimeVersion": "49c985303fd99723dc5d59a62ef5e31c1c34d457"
         }
       ]
     },
