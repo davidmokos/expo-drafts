@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-08T19:42:41.834Z",
+  "generatedAt": "2026-09-08T20:08:21.683Z",
   "drafts": [
+    {
+      "id": "aadb27eb-945c-4c3c-a7d3-05af197d6715",
+      "name": "[example] previews a pull request from GitHub Actions",
+      "channel": "draft-pr-1",
+      "branch": "draft-pr-1",
+      "message": "[example] previews a pull request from GitHub Actions",
+      "createdAt": "2026-09-08T20:08:07.959Z",
+      "gitCommitHash": "e2ba419d0115027a88a2f08e1eed566ab4959405",
+      "pullRequest": {
+        "number": 1,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/1"
+      },
+      "updates": [
+        {
+          "id": "01a082a2-9417-7e29-8c7d-408a0980535f",
+          "groupId": "aadb27eb-945c-4c3c-a7d3-05af197d6715",
+          "platform": "ios",
+          "runtimeVersion": "49c985303fd99723dc5d59a62ef5e31c1c34d457"
+        }
+      ]
+    },
     {
       "id": "a8cebf31-83ab-4f69-9a9a-25fafb5a7824",
       "name": "Ocean workspace",
