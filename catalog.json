@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-08T20:57:32.624Z",
+  "generatedAt": "2026-09-08T22:09:13.031Z",
   "drafts": [
+    {
+      "id": "c135af2b-d04b-456a-9936-f6369f1d3786",
+      "name": "[example] previews a pull request from GitHub Actions",
+      "channel": "draft-pr-1",
+      "branch": "draft-pr-1",
+      "message": "[example] previews a pull request from GitHub Actions",
+      "createdAt": "2026-09-08T22:08:54.125Z",
+      "gitCommitHash": "1751cd545fb14e15b65eec773541ee8e60e9696f",
+      "pullRequest": {
+        "number": 1,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/1"
+      },
+      "updates": [
+        {
+          "id": "01a08311-256d-79a0-a5ae-0dc3fcaa1425",
+          "groupId": "c135af2b-d04b-456a-9936-f6369f1d3786",
+          "platform": "ios",
+          "runtimeVersion": "4b251db3e96d71fbcd20d1be7d63ddf929309765"
+        }
+      ]
+    },
     {
       "id": "1fff297c-0adc-41f6-a7c2-f28de1b4f56a",
       "name": "[example] Reading list",
@@ -61,27 +82,6 @@
         {
           "id": "01a082ce-819c-70a7-9b38-7c776c99a4a1",
           "groupId": "6beb1d66-742b-4ef6-9952-2da32b4b9585",
-          "platform": "ios",
-          "runtimeVersion": "49c985303fd99723dc5d59a62ef5e31c1c34d457"
-        }
-      ]
-    },
-    {
-      "id": "17e0f828-a8ac-46e0-8939-6152223441a7",
-      "name": "[example] previews a pull request from GitHub Actions",
-      "channel": "draft-pr-1",
-      "branch": "draft-pr-1",
-      "message": "[example] previews a pull request from GitHub Actions",
-      "createdAt": "2026-09-08T20:54:48.793Z",
-      "gitCommitHash": "4169cbb18aca43355a9cc50fc9de2219996e72dd",
-      "pullRequest": {
-        "number": 1,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/1"
-      },
-      "updates": [
-        {
-          "id": "01a082cd-50d9-70ae-8908-2e7f73e03a18",
-          "groupId": "17e0f828-a8ac-46e0-8939-6152223441a7",
           "platform": "ios",
           "runtimeVersion": "49c985303fd99723dc5d59a62ef5e31c1c34d457"
         }
