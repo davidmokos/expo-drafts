@@ -7,9 +7,9 @@ const variant = process.env.EXPO_PUBLIC_DRAFT_VARIANT || 'base';
 const themes = {
   base: {
     color: '#d4ef83',
-    label: 'Embedded build',
-    title: 'One build.\nEvery draft.',
-    note: 'Your starting point, bundled into the native app.',
+    label: 'PR workspace',
+    title: 'Published from\nGitHub Actions.',
+    note: 'This pull request arrived over EAS Update. Same native build, no Metro connection.',
   },
   amber: {
     color: '#ffb56b',
