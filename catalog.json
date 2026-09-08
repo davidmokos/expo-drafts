@@ -1,8 +1,26 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-08T19:26:29.942Z",
+  "generatedAt": "2026-09-08T19:33:53.460Z",
   "drafts": [
+    {
+      "id": "26e8c3d4-bdb3-4b0b-8d9e-605d2a4a64dc",
+      "name": "Amber workspace",
+      "channel": "draft-amber",
+      "branch": "draft-amber",
+      "message": "Amber workspace: a warmer home screen",
+      "createdAt": "2026-09-08T19:32:50.640Z",
+      "gitCommitHash": "7ad516ac0b65f4a6f5cb951666de78d1f3de116b",
+      "buildUrl": "https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds",
+      "updates": [
+        {
+          "id": "01a08282-4550-7831-9b05-74aa45020496",
+          "groupId": "26e8c3d4-bdb3-4b0b-8d9e-605d2a4a64dc",
+          "platform": "ios",
+          "runtimeVersion": "e17f06d01caaeb2c4fd391ad5b3f73dafc2fa541"
+        }
+      ]
+    },
     {
       "id": "8dcd732e-2a27-448b-931e-1e1ea6f506ee",
       "name": "Camera experiment",
