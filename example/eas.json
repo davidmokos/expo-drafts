@@ -1,0 +1,16 @@
+{
+  "cli": { "version": ">= 23.1.0" },
+  "build": {
+    "drafts": {
+      "distribution": "internal",
+      "channel": "drafts",
+      "environment": "preview",
+      "ios": { "simulator": true },
+      "android": { "buildType": "apk" }
+    },
+    "drafts-device": {
+      "extends": "drafts",
+      "ios": { "simulator": false }
+    }
+  }
+}

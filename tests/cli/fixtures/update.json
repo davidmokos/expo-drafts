@@ -1,0 +1,26 @@
+[
+  {
+    "id": "92e20c9c-8c92-4b41-a2db-58ca3d570101",
+    "group": "c1a66a49-a495-4243-b7e6-5f43e0e20101",
+    "createdAt": "2026-09-08T12:00:00.000Z",
+    "branch": "draft-pr-42",
+    "message": "Adds checkout totals",
+    "runtimeVersion": "7ccdc372637438885754e1b43a53c78609cad298",
+    "platform": "ios",
+    "manifestPermalink": "https://u.expo.dev/example?private=do-not-copy",
+    "isRollBackToEmbedded": false,
+    "gitCommitHash": "726602fdadbf4d48045d606395fdd92dedce2d27"
+  },
+  {
+    "id": "92e20c9c-8c92-4b41-a2db-58ca3d570102",
+    "group": "c1a66a49-a495-4243-b7e6-5f43e0e20102",
+    "createdAt": "2026-09-08T12:00:00.000Z",
+    "branch": "draft-pr-42",
+    "message": "Adds checkout totals",
+    "runtimeVersion": "40595281d4d54630cabf2f93677b5933506fc68f",
+    "platform": "android",
+    "manifestPermalink": "https://u.expo.dev/example?private=do-not-copy",
+    "isRollBackToEmbedded": false,
+    "gitCommitHash": "726602fdadbf4d48045d606395fdd92dedce2d27"
+  }
+]

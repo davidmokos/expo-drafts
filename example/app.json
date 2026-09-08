@@ -1,0 +1,34 @@
+{
+  "expo": {
+    "name": "Drafts Lab",
+    "slug": "expo-drafts-lab",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.davidmokos.draftslab"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "dev.davidmokos.draftslab"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "owner": "mokosdavid",
+    "scheme": "expo-drafts-lab",
+    "extra": {
+      "eas": {
+        "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929"
+      }
+    }
+  }
+}
