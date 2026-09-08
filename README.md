@@ -112,7 +112,15 @@ npm run ios -- --device YOUR_SIMULATOR_UDID
 
 `npm run ios` compiles a release app with a bundled fallback. The installed app does not need a running Metro process. Android build and simulator validation are deferred.
 
-For a physical iPhone, register the device with EAS and build the `drafts-device` profile from `example/`:
+For a connected physical iPhone, you can compile and install locally from `example/` using a signing certificate and provisioning profile already configured in Xcode:
+
+```sh
+npm run ios -- --device "YOUR_IPHONE_NAME"
+```
+
+The script builds Release without Metro. If the existing profile is managed by Xcode, use Automatic signing on the app target in Xcode. See the [iPhone validation notes](docs/ios-validation.md#physical-iphone-validation) for the completed local installation.
+
+For an EAS cloud build, register the device with EAS and build the `drafts-device` profile from `example/`:
 
 ```sh
 eas device:create

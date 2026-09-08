@@ -79,9 +79,13 @@ Their publishing runs overlapped. [Catalog commit `c34b626`](https://github.com/
 - A clean macOS checkout and Ubuntu CI using Node 24 both resolved the iOS runtime to `49c985303fd99723dc5d59a62ef5e31c1c34d457`. The CI result is recorded in [run 34271935734](https://github.com/davidmokos/expo-drafts/actions/runs/34271935734).
 - `npm pack` succeeded with generated Android build files excluded.
 
-## Physical iPhone status
+## Physical iPhone validation
 
-The EAS device build configuration and installation instructions are prepared. Apple signing authentication is awaiting the user's two-factor verification code. A cloud device build has not completed, and the app has not been installed or tested on the physical iPhone.
+A local Xcode 26.6 Release build for `iphoneos` completed using an existing Xcode-managed development wildcard provisioning profile. The profile matched the connected phone and available signing certificate. Automatic signing was configured only on the app target after manual signing rejected the managed profile. No new Apple login was required.
+
+`codesign --verify --deep --strict` passed for the resulting app. Its embedded `EXUpdates.bundle` contained runtime fingerprint `49c985303fd99723dc5d59a62ef5e31c1c34d457`, matching the PR updates above.
+
+`devicectl` installed and launched the app on the user's iPhone 17 Pro Max running iOS 27 Beta. A subsequent process check confirmed that it was still running. This was a local installation; no EAS cloud device build was run. PR selection and the demo interactions were tested in the simulator. Physical-phone validation covers signing, installation, and process launch, without claiming phone UI tests.
 
 ## Limits
 
