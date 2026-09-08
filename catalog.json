@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
+  "generatedAt": "2026-09-08T19:26:29.942Z",
+  "drafts": [
+    {
+      "id": "8dcd732e-2a27-448b-931e-1e1ea6f506ee",
+      "name": "Camera experiment",
+      "channel": "draft-native",
+      "branch": "draft-native",
+      "message": "Camera experiment: requires a new native build",
+      "createdAt": "2026-09-08T19:25:56.286Z",
+      "gitCommitHash": "1fc8a7d7ad6fe154879f8b115b92bfc366050d7d",
+      "buildUrl": "https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds",
+      "updates": [
+        {
+          "id": "01a0827b-f2be-7704-9101-52d0e7c2b195",
+          "groupId": "8dcd732e-2a27-448b-931e-1e1ea6f506ee",
+          "platform": "ios",
+          "runtimeVersion": "drafts-lab-native-v2"
+        }
+      ]
+    }
+  ]
+}
