@@ -62,12 +62,10 @@ final class ExpoDraftsManager {
     picker = viewController
     let navigation = UINavigationController(rootViewController: viewController)
     navigation.view.accessibilityViewIsModal = true
-    navigation.overrideUserInterfaceStyle = .dark
     navigation.modalPresentationStyle = .pageSheet
     if let sheet = navigation.sheetPresentationController {
       sheet.detents = [.large()]
       sheet.prefersGrabberVisible = true
-      sheet.preferredCornerRadius = 28
     }
     root.present(navigation, animated: true)
   }
@@ -298,16 +296,16 @@ private final class DraftsFloatingController: UIViewController {
     super.viewDidLoad()
     view.backgroundColor = .clear
     button.frame = CGRect(x: 0, y: 0, width: 54, height: 54)
-    button.backgroundColor = UIColor(red: 0.09, green: 0.11, blue: 0.12, alpha: 1)
-    button.tintColor = DraftsStyle.accent
-    button.setImage(UIImage(systemName: "square.stack.3d.up.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: 22, weight: .medium)), for: .normal)
-    button.layer.cornerRadius = 27
-    button.layer.borderWidth = 1
-    button.layer.borderColor = UIColor.white.withAlphaComponent(0.16).cgColor
-    button.layer.shadowColor = UIColor.black.cgColor
-    button.layer.shadowOpacity = 0.3
-    button.layer.shadowRadius = 10
-    button.layer.shadowOffset = CGSize(width: 0, height: 4)
+    var configuration: UIButton.Configuration
+    if #available(iOS 26.0, *) {
+      configuration = .glass()
+    } else {
+      configuration = .tinted()
+    }
+    configuration.cornerStyle = .capsule
+    configuration.image = UIImage(systemName: "square.stack.3d.up.fill")
+    configuration.preferredSymbolConfigurationForImage = UIImage.SymbolConfiguration(pointSize: 22, weight: .medium)
+    button.configuration = configuration
     button.accessibilityLabel = "Open Expo Drafts"
     button.accessibilityIdentifier = "expo-drafts-launcher"
     button.addAction(UIAction { [weak self] _ in self?.onOpen() }, for: .touchUpInside)
