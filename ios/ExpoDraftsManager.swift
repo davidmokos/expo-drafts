@@ -83,7 +83,14 @@ final class ExpoDraftsManager {
       completion(.failure(DraftsError.message("The build is missing its EAS project ID. Configure expo-drafts and create a new build.")))
       return
     }
-    var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 25)
+    // GitHub's raw CDN can retain the old branch head despite a cache-bypassing
+    // URLSession policy. Give explicit refreshes a unique CDN cache key.
+    var requestURL = url
+    if url.host == "raw.githubusercontent.com", var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+      components.queryItems = (components.queryItems ?? []) + [URLQueryItem(name: "expo-drafts-refresh", value: UUID().uuidString)]
+      requestURL = components.url ?? url
+    }
+    var request = URLRequest(url: requestURL, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 25)
     request.setValue("application/json", forHTTPHeaderField: "Accept")
     let expectedProjectID = projectID
     catalogTask = URLSession.shared.dataTask(with: request) { data, response, error in
