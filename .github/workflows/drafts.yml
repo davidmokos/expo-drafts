@@ -17,21 +17,23 @@ on:
 permissions:
   contents: read
 
-# Each PR can build in parallel. A later push cancels an obsolete publish for
-# that PR. The catalog writer uses Git compare-and-swap retries across PRs.
 concurrency:
   group: drafts-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
   update:
+    name: Publish with EAS Workflows
     if: >-
       github.event_name == 'workflow_dispatch' ||
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 55
     env:
+      DRAFT_PROJECT_ID: e8ecb8b1-95ac-4f76-965a-df4b39ea3929
       DRAFT_CHANNEL: ${{ github.event_name == 'pull_request' && format('draft-pr-{0}', github.event.pull_request.number) || inputs.channel }}
       DRAFT_NAME: ${{ github.event.pull_request.title || inputs.name }}
+      DRAFT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       DRAFT_PR_NUMBER: ${{ github.event.pull_request.number }}
       DRAFT_PR_URL: ${{ github.event.pull_request.html_url }}
     steps:
@@ -40,48 +42,78 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           if [ -z "$EXPO_TOKEN" ]; then
-            echo 'Add an EXPO_TOKEN repository secret to enable EAS Update publishing.' >&2
+            echo 'Add an EXPO_TOKEN repository secret to enable EAS Workflows.' >&2
             exit 1
           fi
-      - uses: actions/checkout@v5
+      - name: Check out the PR source
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: source
+          persist-credentials: false
+      - name: Check out trusted workflow tools
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: control
           persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: |
+            source/package-lock.json
+            source/example/package-lock.json
+      # Dependencies let EAS CLI resolve app config before uploading the source.
+      # JavaScript bundling and EAS Update publication happen on EAS workers.
       - run: npm ci
-      - run: npm ci --prefix example
-      - run: npm run build
+        working-directory: source
+      - run: npm ci
+        working-directory: source/example
       - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
-      - name: Publish update
-        working-directory: example
+      - name: Dispatch the EAS workflow
+        working-directory: source/example
+        env:
+          DRAFT_GITHUB_RUN_ID: ${{ github.run_id }}
         run: |
-          mkdir -p ../work
-          eas update --platform ios --channel "$DRAFT_CHANNEL" --message "$DRAFT_NAME" \
-            --environment preview --non-interactive --json > ../work/eas-update.json
+          mkdir -p ../../work
+          test "$(git rev-parse HEAD)" = "$DRAFT_HEAD_SHA"
+          eas workflow:run .eas/workflows/publish-draft.yml --non-interactive --json \
+            --input "channel=$DRAFT_CHANNEL" --input "name=$DRAFT_NAME" \
+            --input "git_commit=$DRAFT_HEAD_SHA" --input "github_run_id=$DRAFT_GITHUB_RUN_ID" \
+            > ../../work/eas-workflow.json
+      - name: Wait for publication on EAS
+        run: |
+          node control/cli/eas-workflow.mjs wait --run-file work/eas-workflow.json \
+            --output work/eas-update.json --project-id "$DRAFT_PROJECT_ID" \
+            --channel "$DRAFT_CHANNEL" --git-commit "$DRAFT_HEAD_SHA"
+      - name: Cancel interrupted EAS publication
+        if: ${{ cancelled() }}
+        run: |
+          node control/cli/eas-workflow.mjs cancel --run-file work/eas-workflow.json \
+            --project-id "$DRAFT_PROJECT_ID" --channel "$DRAFT_CHANNEL" --git-commit "$DRAFT_HEAD_SHA"
       - name: Create draft catalog entry
         shell: bash
+        env:
+          DRAFT_BUILD_URL: ${{ vars.DRAFT_BUILD_URL }}
         run: |
-          project_id=$(node -p "require('./example/app.json').expo.extra.eas.projectId")
-          args=(--input work/eas-update.json --output work/draft.json --project-id "$project_id" --channel "$DRAFT_CHANNEL" --name "$DRAFT_NAME")
+          args=(--input work/eas-update.json --output work/draft.json --project-id "$DRAFT_PROJECT_ID" --channel "$DRAFT_CHANNEL" --name "$DRAFT_NAME")
           if [ -n "$DRAFT_PR_NUMBER" ]; then
             args+=(--pr-number "$DRAFT_PR_NUMBER" --pr-url "$DRAFT_PR_URL")
           fi
           if [ -n "$DRAFT_BUILD_URL" ]; then
             args+=(--build-url "$DRAFT_BUILD_URL")
           fi
-          node cli/index.mjs catalog "${args[@]}"
-        env:
-          DRAFT_BUILD_URL: ${{ vars.DRAFT_BUILD_URL }}
+          node control/cli/index.mjs catalog "${args[@]}"
       - uses: actions/upload-artifact@v4
         with:
           name: draft-catalog-entry
-          path: work/draft.json
+          path: |
+            work/draft.json
+            work/eas-workflow.json
           if-no-files-found: error
 
   catalog:
@@ -90,7 +122,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      # Run the catalog writer from the default branch with no PR dependencies.
+      # The writer runs from the default branch without PR dependencies.
       - uses: actions/checkout@v5
         with:
           ref: ${{ github.event.repository.default_branch }}

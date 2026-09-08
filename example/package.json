@@ -17,7 +17,8 @@
     "android": "expo run:android --variant release --no-bundler",
     "ios": "expo run:ios --configuration Release --no-bundler",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "eas-build-pre-install": "npm ci --prefix .."
   },
   "private": true,
   "expo": {

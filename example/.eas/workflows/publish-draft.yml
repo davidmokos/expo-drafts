@@ -1,0 +1,54 @@
+name: Publish PR draft on EAS
+run_name: ${{ inputs.channel }} / ${{ inputs.name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        type: string
+        required: true
+        description: EAS Update channel for this PR
+      name:
+        type: string
+        required: true
+        description: PR title shown in the draft picker
+      git_commit:
+        type: string
+        required: true
+        description: Exact source commit uploaded by GitHub Actions
+      github_run_id:
+        type: string
+        required: true
+        description: GitHub Actions run that dispatched this publication
+
+# This is EAS concurrency, so canceling an obsolete GitHub job cannot leave an
+# older EAS publication running behind the latest commit for the same PR.
+concurrency:
+  group: expo-drafts-${{ inputs.channel }}
+  cancel_in_progress: true
+
+defaults:
+  image: sdk-57
+  tools:
+    node: '24.11.1'
+
+jobs:
+  publish_update:
+    name: Publish iOS update
+    type: update
+    environment: preview
+    env:
+      DRAFT_EXPECTED_COMMIT: ${{ inputs.git_commit }}
+    params:
+      platform: ios
+      channel: ${{ inputs.channel }}
+      message: ${{ inputs.name }}
+    hooks:
+      before_install_node_modules:
+        - name: Install and compile expo-drafts
+          run: npm ci --prefix ..
+      before_update:
+        - name: Verify uploaded source commit
+          run: test "$(git rev-parse HEAD)" = "$DRAFT_EXPECTED_COMMIT"
+        - name: Check the example app
+          run: npm run typecheck
