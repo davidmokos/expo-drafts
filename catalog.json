@@ -1,8 +1,26 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-08T19:36:46.176Z",
+  "generatedAt": "2026-09-08T19:38:28.187Z",
   "drafts": [
+    {
+      "id": "79ad7e74-b90e-4795-888d-7835e2db0474",
+      "name": "Ocean workspace",
+      "channel": "draft-ocean",
+      "branch": "draft-ocean",
+      "message": "Ocean workspace: a second agent preview",
+      "createdAt": "2026-09-08T19:36:58.568Z",
+      "gitCommitHash": "f773919ce5f9819e138ca5115f2999943dd78d76",
+      "buildUrl": "https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds",
+      "updates": [
+        {
+          "id": "01a08286-0dc8-7c89-9782-d856cb4e4250",
+          "groupId": "79ad7e74-b90e-4795-888d-7835e2db0474",
+          "platform": "ios",
+          "runtimeVersion": "bd8141f7c63f9d0b56a021f09a4851446f1f5a14"
+        }
+      ]
+    },
     {
       "id": "45d88db2-1e25-4ed2-aef1-8d24b1506ec1",
       "name": "Amber workspace",
