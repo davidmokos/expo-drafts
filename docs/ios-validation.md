@@ -14,6 +14,9 @@ The installed native runtime is `49c985303fd99723dc5d59a62ef5e31c1c34d457`.
 | Ocean workspace   | `draft-ocean`  | `01a0828a-9e45-792b-a6af-7a7d58c7110d` | Matches installed runtime                   |
 | Camera experiment | `draft-native` | `01a0827b-f2be-7704-9101-52d0e7c2b195` | Deliberate mismatch: `drafts-lab-native-v2` |
 | PR workspace      | `draft-pr-1`   | `01a082cd-50d9-70ae-8908-2e7f73e03a18` | Matches installed runtime                   |
+| Reading list      | `draft-pr-2`   | `01a082cf-6fd5-71ed-b40e-f6bcb49a31af` | Matches installed runtime                   |
+| Focus timer       | `draft-pr-3`   | `01a082cf-4115-743b-9336-eeb9707e5a70` | Matches installed runtime                   |
+| Color studio      | `draft-pr-4`   | `01a082ce-819c-70a7-9b38-7c776c99a4a1` | Matches installed runtime                   |
 
 The Camera experiment uses an explicit test runtime to exercise the disabled state; it does not add camera functionality. Normal previews use the fingerprint runtime policy.
 
@@ -33,6 +36,15 @@ The Camera experiment uses an explicit test runtime to exercise the disabled sta
 - Selected the first update published for PR #1 through GitHub Actions and confirmed the app showed "PR workspace" and "Published from GitHub Actions." Its running update ID matched `01a082a2-9417-7e29-8c7d-408a0980535f`.
 - Cold-restarted the app and confirmed it reopened on that PR workspace update with the same exact ID.
 - After moving publication to EAS Workflows, selected the replacement PR #1 update. The app's accessibility output reported the exact new ID `01a082cd-50d9-70ae-8908-2e7f73e03a18`.
+- Launched Color studio from PR #4. Selecting a swatch changed the composition and hex value, saving a palette raised its collection count to one, and changing from Moonflower to Apricot hour changed the palette.
+- Launched Focus timer from PR #3, selected five minutes, started the timer, and paused at `04:52`. Reset restored `05:00`.
+- Launched Reading list from PR #2 and opened an article in its reader sheet. Finishing it raised read progress to one, and the Read filter showed only that article. Unsaving an article reduced the saved count, and the Saved filter showed only the remaining saved article.
+- Verified each of the three running update IDs and runtimes against the catalog entries above.
+- Cold-restarted Reading list and verified that its exact update ID persisted. The Read filter then showed its empty state because the demo's JavaScript state had reset.
+- Switched from the newer Reading list update back to the older exact Color studio update. After a cold restart, Color studio reopened and the native picker marked its exact catalog entry as Running.
+- Searched the seven-draft picker for "Camera" and got exactly one disabled result with "Native changes · Needs new EAS build." Tapping it did not launch an update, and Color studio remained active.
+
+The demo interactions use state local to the current JavaScript session. Reading progress, saved palettes, and timer state reset when the app restarts or switches updates. The selected update itself persists across restarts.
 
 ## PR workflow validation
 
@@ -46,6 +58,16 @@ After merging the EAS Workflows implementation into PR #1, source commit `4169cb
 
 The GitHub catalog job then replaced the `draft-pr-1` entry with iOS update `01a082cd-50d9-70ae-8908-2e7f73e03a18`, group `17e0f828-a8ac-46e0-8939-6152223441a7`, and the new source commit. The published artifact and live catalog agreed on these values. Both PR #1 publications resolved runtime `49c985303fd99723dc5d59a62ef5e31c1c34d457`. The simulator selected and launched the new EAS Workflow update, and its accessibility output confirmed the exact ID. [Check package run 34277347133](https://github.com/davidmokos/expo-drafts/actions/runs/34277347133) passed both the package checks and macOS cache tests.
 
+Three further PRs exercised separate previews through the same EAS Workflows pipeline. All three EAS update jobs, GitHub publishing jobs, and package checks succeeded.
+
+| Preview PR | EAS Workflow | GitHub publishing run | Package checks |
+| ---------- | ------------ | --------------------- | -------------- |
+| [#2 Reading list](https://github.com/davidmokos/expo-drafts/pull/2) | [01a082ce-434f](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a082ce-434f-738f-8472-3d99964e60b0) | [34277547731](https://github.com/davidmokos/expo-drafts/actions/runs/34277547731) | [34277547833](https://github.com/davidmokos/expo-drafts/actions/runs/34277547833) |
+| [#3 Focus timer](https://github.com/davidmokos/expo-drafts/pull/3) | [01a082ce-0fb0](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a082ce-0fb0-7ff9-b299-12efdbfc1890) | [34277527677](https://github.com/davidmokos/expo-drafts/actions/runs/34277527677) | [34277527450](https://github.com/davidmokos/expo-drafts/actions/runs/34277527450) |
+| [#4 Color studio](https://github.com/davidmokos/expo-drafts/pull/4) | [01a082cd-4cf9](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a082cd-4cf9-7895-a566-190ca60b037f) | [34277438141](https://github.com/davidmokos/expo-drafts/actions/runs/34277438141) | [34277438113](https://github.com/davidmokos/expo-drafts/actions/runs/34277438113) |
+
+Their publishing runs overlapped. [Catalog commit `c34b626`](https://github.com/davidmokos/expo-drafts/blob/c34b626bd3171c98d21fda71bb6606e57c82740a/catalog.json) retained all seven channels, including PRs #1 through #4 and the three original drafts. Each new catalog entry matched its workflow artifact's exact update ID, update group, source commit, and runtime. All three used the existing installed runtime and launched without rebuilding the simulator app.
+
 ## Automated checks
 
 - Package TypeScript build and ESLint passed.
@@ -56,6 +78,10 @@ The GitHub catalog job then replaced the `draft-pr-1` entry with iOS update `01a
 - [GitHub Actions run 34270412779](https://github.com/davidmokos/expo-drafts/actions/runs/34270412779) passed both the package checks and macOS transaction tests for implementation commit `3f528cf`.
 - A clean macOS checkout and Ubuntu CI using Node 24 both resolved the iOS runtime to `49c985303fd99723dc5d59a62ef5e31c1c34d457`. The CI result is recorded in [run 34271935734](https://github.com/davidmokos/expo-drafts/actions/runs/34271935734).
 - `npm pack` succeeded with generated Android build files excluded.
+
+## Physical iPhone status
+
+The EAS device build configuration and installation instructions are prepared. Apple signing authentication is awaiting the user's two-factor verification code. A cloud device build has not completed, and the app has not been installed or tested on the physical iPhone.
 
 ## Limits
 
