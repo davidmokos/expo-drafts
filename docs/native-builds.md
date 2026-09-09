@@ -4,7 +4,7 @@ The picker reads two catalogs. `catalog.json` lists EAS Updates, and `build-cata
 
 ## Request and install flow
 
-1. Open an incompatible draft. If a verified matching build is ready, select **Install compatible build** to hand it directly to the iOS installer. Confirm installation in the system dialog; the app does not open the EAS website.
+1. Open an incompatible draft. If a verified matching build is ready, select **Install compatible build** to hand it directly to the iOS installer. Confirm installation in the system dialog, then go to the Home Screen and wait for the app icon to finish installing. The app does not open the EAS website.
 2. If no build is available, select **Request Build**. Safari opens a prefilled GitHub issue with the preview's identity. Sign in to GitHub and submit the issue. Merely opening the page does not create a build.
 3. GitHub Actions verifies that the requester has write, maintain, or admin access. It reads the current catalog from the trusted catalog branch, verifies the update ID and runtime, and uses the catalog's source commit. PRs must still point to that exact commit in the same repository. A stale request must be refreshed.
 4. The workflow publishes a queued record, installs source dependencies, and verifies that the checkout reproduces the requested fingerprint. It uploads the source with the trusted EAS build workflow.
@@ -13,6 +13,10 @@ The picker reads two catalogs. `catalog.json` lists EAS Updates, and `build-cata
 7. Complete installation on the phone and reopen the app. The new native binary determines which updates are compatible.
 
 A new native binary with the same bundle identifier replaces the current app. It does not make every older runtime compatible. App data remains shared between drafts, so coordinate database migrations and persisted state.
+
+The picker retains an **Installation requested** row after the URL handoff, including across picker and app restarts. Its activity indicator means a request is pending; iOS provides no confirmation or download-progress callback for this flow. The row offers retry and **Hide Status** if the system prompt was canceled. Hiding it does not cancel an installation already accepted by iOS. The record is discarded after 15 minutes or when the app observes another native runtime.
+
+The **Running** row always describes the actual launched bundle, independently of installation requests and catalog availability. An embedded bundle has its own UUID and may differ from every published EAS Update. Only an exact update ID and runtime match can supply a preview name. Tapping the row shows the full identity and native app version.
 
 ## Configure another app
 
@@ -70,7 +74,7 @@ https://api.expo.dev/v2/projects/{projectId}/builds/{buildId}/manifest.plist
 
 This is the endpoint used by EAS CLI for internal iOS installation. The app validates the manifest, then opens an `itms-services` URL through UIKit. The catalog retains the stable build identity. It does not store the manifest's temporary signed IPA URL.
 
-The system installer requires a physical iPhone. The simulator can test URL and manifest validation, but cannot install a device IPA. The app can confirm that iOS accepted the handoff, not whether the user confirmed or the installation completed.
+The system installer requires a registered physical iPhone or iPad supported by the build. Foundation tests cover URL and manifest validation; the simulator's install action displays a device-only message before requesting a manifest. The app can confirm that iOS accepted the handoff, not whether the user confirmed or the installation completed.
 
 ## Verification and failure handling
 
