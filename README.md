@@ -117,7 +117,9 @@ For existing integrations, an explicitly configured `catalogUrl` still enables t
 
 ## Test app
 
-`example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker reads EAS directly after Expo sign-in. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
+`example/` is Drafts Lab, an Expo app linked to `@mokosdavid/expo-drafts-lab`. It uses `@expo/ui` controls with Expo Router's native tab bar and navigation stacks. Library has book details and reading progress, Focus has a timer, Studio has the system color picker, and Settings opens Drafts and shows the running bundle. Its native draft picker reads EAS directly after Expo sign-in.
+
+Each PR changes `example/src/data/preview.ts` to choose its starting tab, sample content, timer defaults, and palette. All screens live in the shared native build, so these preview changes can be published as EAS Updates. Adding or changing native dependencies requires a new compatible build.
 
 PRs #1 through #4 share one native runtime. PR #5 changes `ios.supportsTablet` to `false` and requires a different native build, providing a real native upgrade to try from the picker. The original manual channels remain in EAS with earlier runtimes. See the [validation record](docs/ios-validation.md) for the current builds, exact update IDs, and completed checks.
 
