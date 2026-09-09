@@ -33,7 +33,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
 
   init(manager: ExpoDraftsManager) {
     self.manager = manager
-    drafts = manager.cachedCatalog?.drafts.sorted { $0.createdAt > $1.createdAt } ?? []
+    drafts = DraftEntry.newestFirst(manager.cachedCatalog?.drafts ?? [])
     super.init(style: .insetGrouped)
   }
 
@@ -109,7 +109,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       self.refreshControl?.endRefreshing()
       switch result {
       case .success(let catalog):
-        self.drafts = catalog.drafts.sorted { $0.createdAt > $1.createdAt }
+        self.drafts = DraftEntry.newestFirst(catalog.drafts)
       case .failure(let error):
         if self.manager.usesEASDiscovery && self.manager.cachedCatalog == nil { self.drafts = [] }
         self.errorMessage = error.localizedDescription
@@ -311,12 +311,15 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     } else {
       subtitle = draft.pullRequest.map { "PR #\($0.number)" } ?? draft.channel
     }
+    let publication = draft.publicationDate.map {
+      "Published \(DateFormatter.localizedString(from: $0, dateStyle: .medium, timeStyle: .medium))"
+    } ?? "Publication time unavailable"
 
     var content = cell.defaultContentConfiguration()
     content.text = draft.name
     content.textProperties.numberOfLines = 2
     content.textProperties.color = reason == nil ? .label : .secondaryLabel
-    content.secondaryText = subtitle
+    content.secondaryText = "\(subtitle)\n\(publication)"
     content.secondaryTextProperties.numberOfLines = 0
     cell.contentConfiguration = content
     cell.accessoryType = current ? .checkmark : (reason != nil && draft.iosUpdate != nil ? .disclosureIndicator : .none)
@@ -329,7 +332,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     }
     let selectable = !busy && (reason == nil || draft.iosUpdate != nil)
     cell.selectionStyle = selectable ? .default : .none
-    cell.accessibilityLabel = "\(draft.name), \(subtitle)"
+    cell.accessibilityLabel = "\(draft.name), \(subtitle), \(publication)"
     cell.accessibilityValue = current ? "Current update" : nil
     cell.accessibilityHint = reason != nil && draft.iosUpdate != nil ? "Shows build options. This update cannot run in the installed native build." : nil
     cell.accessibilityTraits = selectable ? [.button] : [.button, .notEnabled]
