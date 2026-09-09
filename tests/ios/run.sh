@@ -8,6 +8,8 @@ swiftc -I "$test_dir" -L "$test_dir" -lEXUpdates -Xlinker -rpath -Xlinker "$test
 "$test_dir/transaction-tests"
 swiftc ios/ExpoDraftsCatalog.swift ios/ExpoDraftsBuildCatalog.swift tests/ios/build-catalog-tests.swift -o "$test_dir/build-catalog-tests"
 "$test_dir/build-catalog-tests" "$test_dir/build-request-fixture.json"
+swiftc ios/ExpoDraftsCatalog.swift ios/ExpoDraftsBuildCatalog.swift ios/ExpoDraftsBuildInstallation.swift tests/ios/build-installation-tests.swift -o "$test_dir/build-installation-tests"
+"$test_dir/build-installation-tests"
 node --input-type=module - "$test_dir/build-request-fixture.json" <<'NODE'
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

@@ -7,9 +7,11 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   private var loading = true
   private var errorMessage: String?
   private var loadingDraftID: String?
+  private var preparingBuildID: String?
   private var buildRefreshTimer: Timer?
   private var foregroundObserver: NSObjectProtocol?
   private var pickerVisible = false
+  private var busy: Bool { loadingDraftID != nil || preparingBuildID != nil }
 
   private var filteredDrafts: [DraftEntry] {
     guard let query = search.searchBar.text?.trimmingCharacters(in: .whitespacesAndNewlines), !query.isEmpty else { return drafts }
@@ -77,7 +79,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   }
 
   @objc private func refreshCatalog() {
-    guard loadingDraftID == nil else { return }
+    guard !busy else { return }
     loading = true
     errorMessage = nil
     updateBackground()
@@ -105,7 +107,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   }
 
   private func refreshBuildMetadata() {
-    guard loadingDraftID == nil else { return }
+    guard !busy else { return }
     manager.fetchBuildCatalog { [weak self] in
       guard let self else { return }
       self.tableView.reloadData()
@@ -117,7 +119,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   private func updateBuildPolling() {
     buildRefreshTimer?.invalidate()
     buildRefreshTimer = nil
-    guard pickerVisible, loadingDraftID == nil, UIApplication.shared.applicationState == .active,
+    guard pickerVisible, !busy, UIApplication.shared.applicationState == .active,
       drafts.contains(where: { manager.compatibility($0) != nil && manager.build(for: $0)?.isInProgress == true }) else { return }
     buildRefreshTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
       guard let self, self.pickerVisible, UIApplication.shared.applicationState == .active else { return }
@@ -203,12 +205,12 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       let cell = tableView.dequeueReusableCell(withIdentifier: "build", for: indexPath)
       var content = cell.defaultContentConfiguration()
       content.text = "All EAS Builds"
-      content.textProperties.color = loadingDraftID == nil ? .tintColor : .secondaryLabel
+      content.textProperties.color = !busy ? .tintColor : .secondaryLabel
       content.image = UIImage(systemName: "arrow.up.right")
       cell.contentConfiguration = content
-      cell.selectionStyle = loadingDraftID == nil ? .default : .none
+      cell.selectionStyle = !busy ? .default : .none
       cell.accessibilityIdentifier = "expo-drafts-builds"
-      cell.accessibilityTraits = loadingDraftID == nil ? [.button] : [.button, .notEnabled]
+      cell.accessibilityTraits = !busy ? [.button] : [.button, .notEnabled]
       return cell
     }
 
@@ -217,8 +219,10 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     let reason = manager.compatibility(draft)
     let current = manager.isCurrent(draft)
     let downloading = loadingDraftID == draft.id
+    let preparingBuild = preparingBuildID == draft.id
     let subtitle: String
-    if downloading { subtitle = "Downloading…" }
+    if preparingBuild { subtitle = "Preparing installation…" }
+    else if downloading { subtitle = "Downloading…" }
     else if reason != nil {
       subtitle = buildSubtitle(for: draft)
     } else {
@@ -233,14 +237,14 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     content.secondaryTextProperties.numberOfLines = 0
     cell.contentConfiguration = content
     cell.accessoryType = current ? .checkmark : (reason != nil && draft.iosUpdate != nil ? .disclosureIndicator : .none)
-    if downloading || (reason != nil && manager.build(for: draft)?.isInProgress == true) {
+    if preparingBuild || downloading || (reason != nil && manager.build(for: draft)?.isInProgress == true) {
       let spinner = UIActivityIndicatorView(style: .medium)
       spinner.startAnimating()
       cell.accessoryView = spinner
     } else {
       cell.accessoryView = nil
     }
-    let selectable = loadingDraftID == nil && (reason == nil || draft.iosUpdate != nil)
+    let selectable = !busy && (reason == nil || draft.iosUpdate != nil)
     cell.selectionStyle = selectable ? .default : .none
     cell.accessibilityLabel = "\(draft.name), \(subtitle)"
     cell.accessibilityValue = current ? "Current update" : nil
@@ -253,7 +257,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
 
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
     tableView.deselectRow(at: indexPath, animated: true)
-    guard loadingDraftID == nil else { return }
+    guard !busy else { return }
     if indexPath.section == 1 {
       manager.openBuild()
       return
@@ -298,7 +302,11 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     let statusURL = build?.verifiedStatusURL
     let message: String
     if installURL != nil {
-      message = "A compatible iOS device build is ready. Open its EAS page to install it, then return to Drafts and select this update."
+      #if targetEnvironment(simulator)
+      message = "A compatible device build is ready. Install it from Drafts on a registered iPhone or iPad. Device builds cannot be installed in the simulator."
+      #else
+      message = "Confirm installation when iOS asks. This replaces the installed app. Reopen the app when installation finishes, then select this update."
+      #endif
     } else if build?.isInProgress == true {
       let progress = build?.state == "queued" ? "A compatible iOS device build is queued." : "A compatible iOS device build is in progress."
       message = progress + (statusURL == nil ? " Refresh the build status to check for completion." : " Open its status page for progress.")
@@ -314,7 +322,10 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     }
     let sheet = UIAlertController(title: draft.name, message: message, preferredStyle: .actionSheet)
     if let installURL {
-      sheet.addAction(UIAlertAction(title: "Install compatible build", style: .default) { [weak self] _ in self?.openBuildURL(installURL) })
+      sheet.addAction(UIAlertAction(title: "Install compatible build", style: .default) { [weak self, weak sheet] _ in
+        sheet?.dismiss(animated: true) { self?.installBuild(for: draft) }
+      })
+      sheet.addAction(UIAlertAction(title: "View EAS Build Page", style: .default) { [weak self] _ in self?.openBuildURL(installURL) })
     }
     if let statusURL, statusURL != installURL {
       sheet.addAction(UIAlertAction(title: "View Build Status", style: .default) { [weak self] _ in self?.openBuildURL(statusURL) })
@@ -336,6 +347,28 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       popover.sourceRect = tableView.rectForRow(at: indexPath)
     }
     present(sheet, animated: true)
+  }
+
+  private func installBuild(for draft: DraftEntry) {
+    guard !busy else { return }
+    preparingBuildID = draft.id
+    isModalInPresentation = true
+    navigationItem.rightBarButtonItem?.isEnabled = false
+    search.searchBar.isUserInteractionEnabled = false
+    refreshControl?.isEnabled = false
+    tableView.reloadData()
+    updateBuildPolling()
+    manager.installBuild(for: draft) { [weak self] error in
+      guard let self else { return }
+      self.preparingBuildID = nil
+      self.isModalInPresentation = false
+      self.navigationItem.rightBarButtonItem?.isEnabled = true
+      self.search.searchBar.isUserInteractionEnabled = true
+      self.refreshControl?.isEnabled = true
+      self.tableView.reloadData()
+      self.updateBuildPolling()
+      if let error { self.presentBuildError(error) }
+    }
   }
 
   private func openBuildURL(_ url: URL) {
