@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T14:10:29.867Z",
+  "generatedAt": "2026-09-09T14:11:14.825Z",
   "drafts": [
+    {
+      "id": "a11520d3-3bfd-493e-aa35-7725123f2b6d",
+      "name": "[example] previews a pull request from GitHub Actions",
+      "channel": "draft-pr-1",
+      "branch": "draft-pr-1",
+      "message": "[example] previews a pull request from GitHub Actions",
+      "createdAt": "2026-09-09T14:10:39.611Z",
+      "gitCommitHash": "733e00fc51861079b2357abb8bbb15533ca47cc0",
+      "pullRequest": {
+        "number": 1,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/1"
+      },
+      "updates": [
+        {
+          "id": "01a08681-a97b-7972-9b98-35749a9a58dd",
+          "groupId": "a11520d3-3bfd-493e-aa35-7725123f2b6d",
+          "platform": "ios",
+          "runtimeVersion": "0b52dae850fb723b136dfed86d4051693ab14617"
+        }
+      ]
+    },
     {
       "id": "f9e2fe0e-15f3-4fd7-a434-007e05db0124",
       "name": "[example] iPhone-only native preview",
@@ -84,27 +105,6 @@
           "groupId": "1ea839ac-36cc-49f9-acd5-2378d059e24a",
           "platform": "ios",
           "runtimeVersion": "0b52dae850fb723b136dfed86d4051693ab14617"
-        }
-      ]
-    },
-    {
-      "id": "1446a658-0f78-4364-a030-f29eb3f1efe5",
-      "name": "[example] previews a pull request from GitHub Actions",
-      "channel": "draft-pr-1",
-      "branch": "draft-pr-1",
-      "message": "[example] previews a pull request from GitHub Actions",
-      "createdAt": "2026-09-09T13:14:31.831Z",
-      "gitCommitHash": "e68bab01078d64ec294c973e25d148655b82a4b8",
-      "pullRequest": {
-        "number": 1,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/1"
-      },
-      "updates": [
-        {
-          "id": "01a0864e-4617-7a0d-872f-9bbf0e825ce0",
-          "groupId": "1446a658-0f78-4364-a030-f29eb3f1efe5",
-          "platform": "ios",
-          "runtimeVersion": "166ee8786683217e3c8d06b3e8b322e68f80e17d"
         }
       ]
     },
