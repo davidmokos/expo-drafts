@@ -87,6 +87,8 @@ The button's visibility applies to the current process. Include the plugin with 
 
 The picker's **Running** section identifies the active bundle immediately, including the first launch after installing another native build. It shows the preview name when the running EAS Update exactly matches a catalog entry. Otherwise, it identifies the bundle included in the build or a downloaded update by its own ID. Tap this row for the full bundle ID, creation time, app version, and native runtime. Sharing a runtime does not make two bundles the same version.
 
+When a downloaded update is running, **Run bundled version** appears directly below Running. It reloads the JavaScript bundle included in the installed native build without a download or a catalog connection. The selection survives restarting the app. You can then select another compatible PR as usual. Installing a different native build changes which bundled version this action returns to.
+
 ## Native builds from the picker
 
 Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install compatible build**, which hands the build directly to iOS's installer without opening the EAS website. Confirm the system installation dialog, then go to the Home Screen. Wait for the app icon to finish installing before reopening the app. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
@@ -121,7 +123,7 @@ Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to 
 
 `example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker uses this repository's catalog. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
 
-Direct installation uses native runtime `166ee8786683217e3c8d06b3e8b322e68f80e17d`. PRs #1 through #4 have been republished through EAS Workflows for that runtime. PR #5 changes `ios.supportsTablet` to `false` and uses runtime `b585b87f336c7d3a807921c6c6e80795b9fdd2e0`, providing a real native upgrade to try from the picker. The original manual Amber, Ocean, and Camera entries remain in the catalog with earlier runtimes. See the [validation record](docs/ios-validation.md#direct-installation-from-the-app) for exact update IDs and completed checks.
+PRs #1 through #4 share one native runtime. PR #5 changes `ios.supportsTablet` to `false` and requires a different native build, providing a real native upgrade to try from the picker. The original manual Amber, Ocean, and Camera entries remain in the catalog with earlier runtimes. See the [validation record](docs/ios-validation.md) for the current builds, exact update IDs, and completed checks.
 
 ```sh
 npm ci
