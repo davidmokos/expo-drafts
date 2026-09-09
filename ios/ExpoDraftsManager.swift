@@ -37,6 +37,12 @@ final class ExpoDraftsManager {
   var currentChannel: String { constants["channel"] as? String ?? "" }
   var currentUpdateID: String { (constants["updateId"] as? String ?? "").lowercased() }
   var updatesEnabled: Bool { constants["isEnabled"] as? Bool ?? false }
+  var isEmbeddedLaunch: Bool { constants["isEmbeddedLaunch"] as? Bool ?? false }
+  var canRunBundledVersion: Bool {
+    guard updatesEnabled,
+      let controller = AppController.sharedInstance as? EnabledAppController else { return false }
+    return controller.getEmbeddedUpdate() != nil
+  }
 
   var pendingInstallation: DraftInstallationRequest? {
     installationState.active(projectID: projectID, currentRuntime: runtimeVersion)
@@ -310,7 +316,10 @@ final class ExpoDraftsManager {
   }
 
   func launch(_ draft: DraftEntry, completion: @escaping (Result<Void, Error>) -> Void) {
-    guard !switching else { return }
+    guard !switching else {
+      completion(.failure(DraftsError.message("Another bundle is already opening.")))
+      return
+    }
     guard !preparingInstallation else {
       completion(.failure(DraftsError.message("Wait for the installation handoff to finish before opening a draft.")))
       return
@@ -331,15 +340,44 @@ final class ExpoDraftsManager {
       return
     }
     if isCurrent(draft) { completion(.success(())); return }
-    switching = true
-    let previousHeaders = controller.requestHeaders ?? [:]
-    var nextHeaders = previousHeaders
+    var nextHeaders = controller.requestHeaders ?? [:]
     nextHeaders["expo-channel-name"] = draft.channel
     // Expo persists fetched updates before returning their manifests. Isolate each selection
     // so rejecting a moved channel head cannot activate that cached update on next launch.
     nextHeaders["expo-drafts-selection"] = expected.id.lowercased()
 
-    DraftsUpdateTransaction.begin(controller: controller, expectedID: expected.id, nextHeaders: nextHeaders) { result in
+    selectUpdate(controller: controller, expectedID: expected.id, nextHeaders: nextHeaders, bundled: false, completion: completion)
+  }
+
+  func launchEmbedded(completion: @escaping (Result<Void, Error>) -> Void) {
+    guard !switching, !preparingInstallation else {
+      completion(.failure(DraftsError.message("Wait for the current operation to finish before opening the bundled version.")))
+      return
+    }
+    guard canRunBundledVersion,
+      let controller = AppController.sharedInstance as? EnabledAppController,
+      let embedded = controller.getEmbeddedUpdate() else {
+      completion(.failure(DraftsError.message("This native build has no bundled version available.")))
+      return
+    }
+    if isEmbeddedLaunch { completion(.success(())); return }
+    do {
+      let config = try UpdatesConfig.configWithExpoPlist(mergingOtherDictionary: nil)
+      selectUpdate(
+        controller: controller, expectedID: embedded.updateId.uuidString,
+        nextHeaders: config.originalEmbeddedRequestHeaders, bundled: true, completion: completion
+      )
+    } catch { completion(.failure(error)) }
+  }
+
+  private func selectUpdate(
+    controller: EnabledAppController, expectedID: String, nextHeaders: [String: String],
+    bundled: Bool, completion: @escaping (Result<Void, Error>) -> Void
+  ) {
+    switching = true
+    let previousHeaders = controller.requestHeaders ?? [:]
+
+    DraftsUpdateTransaction.begin(controller: controller, expectedID: expectedID, nextHeaders: nextHeaders) { result in
       switch result {
       case .failure(let error):
         self.switching = false
@@ -363,48 +401,53 @@ final class ExpoDraftsManager {
               } else if headersRestored {
                 transaction.commit()
               }
-              self.switching = false
               if restoreRunningBundle && headersRestored && rollbackError == nil {
                 controller.requestRelaunch {
-                  DispatchQueue.main.async { completion(.failure(reportedError)) }
+                  DispatchQueue.main.async {
+                    self.switching = false
+                    completion(.failure(reportedError))
+                  }
                 } error: { restoreError in
                   DispatchQueue.main.async {
+                    self.switching = false
                     completion(.failure(DraftsError.message("\(reportedError.localizedDescription) Reopen the app to return to the previous draft: \(restoreError.localizedDescription)")))
                   }
                 }
               } else {
+                self.switching = false
                 completion(.failure(reportedError))
               }
             }
+          }
+        }
+        let prepared: (Result<Void, Error>) -> Void = { preparation in
+          switch preparation {
+          case .failure(let error): fail(error, false)
+          case .success:
+            controller.requestRelaunch {
+              DispatchQueue.main.async {
+                guard self.currentUpdateID == expectedID.lowercased(), !bundled || self.isEmbeddedLaunch else {
+                  fail(DraftsError.message("Expo launched a different bundle. Restoring the previous version."), true)
+                  return
+                }
+                guard !finished else { return }
+                finished = true
+                transaction.commit()
+                self.switching = false
+                completion(.success(()))
+              }
+            } error: { fail($0, false) }
           }
         }
         let download: () -> Void = {
           controller.fetchUpdate { fetchResult in
             switch fetchResult {
             case .success(let manifest):
-              guard let actual = manifest["id"] as? String, actual.lowercased() == expected.id.lowercased() else {
+              guard let actual = manifest["id"] as? String, actual.lowercased() == expectedID.lowercased() else {
                 fail(DraftsError.message("This channel changed since the catalog was loaded. Refresh the draft list and choose the latest version."), false)
                 return
               }
-              transaction.prepareLaunch(expectedID: expected.id) { preparation in
-                switch preparation {
-                case .failure(let error): fail(error, false)
-                case .success:
-                  controller.requestRelaunch {
-                    DispatchQueue.main.async {
-                      guard self.currentUpdateID == expected.id.lowercased() else {
-                        fail(DraftsError.message("Expo launched a different cached update. Restoring the previous draft."), true)
-                        return
-                      }
-                      guard !finished else { return }
-                      finished = true
-                      transaction.commit()
-                      self.switching = false
-                      completion(.success(()))
-                    }
-                  } error: { fail($0, false) }
-                }
-              }
+              transaction.prepareLaunch(expectedID: expectedID, completion: prepared)
             case .failure:
               fail(DraftsError.message("No matching update was downloaded. The draft may have changed or been removed. Refresh and try again."), false)
             case .rollBackToEmbedded:
@@ -415,12 +458,16 @@ final class ExpoDraftsManager {
         }
         do { try controller.setUpdateRequestHeadersOverride(nextHeaders) }
         catch { fail(error, false); return }
+        if bundled {
+          transaction.prepareEmbeddedLaunch(expectedID: expectedID, completion: prepared)
+          return
+        }
         // Check the ID before the downloader can alter the cache. The transaction
         // also covers a channel moving between this check and the actual fetch.
         controller.checkForUpdate { check in
           switch check {
           case .updateAvailable(let manifest):
-            guard let actual = manifest["id"] as? String, actual.lowercased() == expected.id.lowercased() else {
+            guard let actual = manifest["id"] as? String, actual.lowercased() == expectedID.lowercased() else {
               fail(DraftsError.message("This channel has a newer update than the catalog. Refresh drafts and choose its latest version."), false)
               return
             }
