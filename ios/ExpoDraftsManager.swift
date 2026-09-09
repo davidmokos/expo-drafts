@@ -11,6 +11,11 @@ final class ExpoDraftsManager {
   private(set) var switching = false
   private var catalogTask: URLSessionDataTask?
   private var buildsCatalogTask: URLSessionDataTask?
+  private let expoSession = DraftsExpoSession()
+  private let easClient = DraftsEASClient()
+  private var catalogGeneration = UUID()
+  private(set) var cachedCatalog: DraftCatalog?
+  private(set) var discoveryAccessError: String?
   private var installationRequest: DraftBuildManifestRequest?
   private var preparingInstallation = false
   private let installationState = DraftInstallationStateStore()
@@ -23,6 +28,42 @@ final class ExpoDraftsManager {
   var projectID: String { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsProjectID") as? String ?? "" }
   var buildURL: String? { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildURL") as? String }
   var buildProfile: String { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildProfile") as? String ?? "drafts-device" }
+  var usesEASDiscovery: Bool {
+    (Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsCatalogURL") as? String)?.isEmpty != false
+  }
+  var isSignedIn: Bool { expoSession.isSignedIn }
+  var isAuthenticating: Bool { expoSession.isAuthenticating }
+
+  func signIn(presenting controller: UIViewController, completion: @escaping (Result<Void, Error>) -> Void) {
+    expoSession.signIn(presenting: controller, completion: completion)
+  }
+
+  func signOut() {
+    catalogGeneration = UUID()
+    buildsCatalogGeneration = UUID()
+    easClient.cancel()
+    expoSession.signOut()
+    cachedCatalog = nil
+    buildsCatalog = nil
+    buildsCatalogLoading = false
+    buildsCatalogError = nil
+    discoveryAccessError = nil
+  }
+
+  private func handleDiscoveryError(_ error: Error) {
+    guard let error = error as? DraftEASError else { return }
+    if error.requiresSignIn {
+      signOut()
+    } else if error.invalidatesCachedData {
+      catalogGeneration = UUID()
+      buildsCatalogGeneration = UUID()
+      easClient.cancel()
+      cachedCatalog = nil
+      buildsCatalog = nil
+      buildsCatalogLoading = false
+      discoveryAccessError = error.localizedDescription
+    }
+  }
   var buildRequestsConfigured: Bool {
     let url = Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildRequestURL") as? String
     return url?.isEmpty == false
@@ -107,6 +148,24 @@ final class ExpoDraftsManager {
 
   func fetchCatalog(completion: @escaping (Result<DraftCatalog, Error>) -> Void) {
     catalogTask?.cancel()
+    let generation = UUID()
+    catalogGeneration = generation
+    if usesEASDiscovery {
+      discoveryAccessError = nil
+      guard let secret = expoSession.sessionSecret else {
+        completion(.failure(DraftsError.message("Sign in to Expo to browse this project's EAS Updates.")))
+        return
+      }
+      easClient.fetchCatalog(projectID: projectID, sessionSecret: secret) { [weak self] result in
+        guard let self, self.catalogGeneration == generation else { return }
+        switch result {
+        case .success(let catalog): self.cachedCatalog = catalog
+        case .failure(let error): self.handleDiscoveryError(error)
+        }
+        completion(result)
+      }
+      return
+    }
     guard let rawURL = Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsCatalogURL") as? String,
       let url = URL(string: rawURL), url.isDraftsTrustedURL else {
       completion(.failure(DraftsError.message("Add a secure catalogUrl to the expo-drafts config plugin, then create a new native build.")))
@@ -126,7 +185,7 @@ final class ExpoDraftsManager {
     var request = URLRequest(url: requestURL, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 25)
     request.setValue(url.host == "api.github.com" ? "application/vnd.github.raw+json" : "application/json", forHTTPHeaderField: "Accept")
     let expectedProjectID = projectID
-    catalogTask = URLSession.shared.dataTask(with: request) { data, response, error in
+    catalogTask = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
       if (error as NSError?)?.code == NSURLErrorCancelled { return }
       let result: Result<DraftCatalog, Error> = Result {
         if let error { throw error }
@@ -153,7 +212,11 @@ final class ExpoDraftsManager {
         }
         return catalog
       }
-      DispatchQueue.main.async { completion(result) }
+      DispatchQueue.main.async {
+        guard let self, self.catalogGeneration == generation else { return }
+        if case .success(let catalog) = result { self.cachedCatalog = catalog }
+        completion(result)
+      }
     }
     catalogTask?.resume()
   }
@@ -170,6 +233,29 @@ final class ExpoDraftsManager {
     buildsCatalogTask = nil
     let generation = UUID()
     buildsCatalogGeneration = generation
+    if usesEASDiscovery {
+      guard let secret = expoSession.sessionSecret else {
+        buildsCatalogLoading = false
+        buildsCatalogError = nil
+        buildsCatalog = nil
+        completion()
+        return
+      }
+      buildsCatalogLoading = true
+      buildsCatalogError = nil
+      easClient.fetchBuildCatalog(projectID: projectID, profile: buildProfile, sessionSecret: secret) { [weak self] result in
+        guard let self, self.buildsCatalogGeneration == generation else { return }
+        self.buildsCatalogLoading = false
+        switch result {
+        case .success(let catalog): self.buildsCatalog = catalog
+        case .failure(let error):
+          self.handleDiscoveryError(error)
+          self.buildsCatalogError = error.localizedDescription
+        }
+        completion()
+      }
+      return
+    }
     guard let rawURL = Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildsCatalogURL") as? String, !rawURL.isEmpty else {
       buildsCatalogLoading = false
       buildsCatalogError = nil
