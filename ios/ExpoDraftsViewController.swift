@@ -7,6 +7,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   private var loading = true
   private var errorMessage: String?
   private var loadingDraftID: String?
+  private var openingBundledVersion = false
   private var preparingBuildID: String?
   private var installation: DraftInstallationRequest?
 
@@ -17,7 +18,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   private var buildRefreshTimer: Timer?
   private var foregroundObserver: NSObjectProtocol?
   private var pickerVisible = false
-  private var busy: Bool { loadingDraftID != nil || preparingBuildID != nil }
+  private var busy: Bool { loadingDraftID != nil || preparingBuildID != nil || openingBundledVersion }
 
   private var filteredDrafts: [DraftEntry] {
     guard let query = search.searchBar.text?.trimmingCharacters(in: .whitespacesAndNewlines), !query.isEmpty else { return drafts }
@@ -99,7 +100,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
         self.drafts = catalog.drafts.sorted { $0.createdAt > $1.createdAt }
       case .failure(let error):
         self.errorMessage = error.localizedDescription
-        if !self.drafts.isEmpty {
+        if !self.drafts.isEmpty && !self.busy && self.pickerVisible && self.presentedViewController == nil {
           let alert = UIAlertController(title: "Couldn't Refresh Drafts", message: error.localizedDescription, preferredStyle: .alert)
           alert.addAction(UIAlertAction(title: "Try Again", style: .default) { [weak self] _ in self?.refreshCatalog() })
           alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -168,7 +169,9 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   override func numberOfSections(in tableView: UITableView) -> Int { sections.count }
 
   override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    sections[section] == .drafts ? max(filteredDrafts.count, 1) : 1
+    if sections[section] == .drafts { return max(filteredDrafts.count, 1) }
+    if sections[section] == .current, manager.canRunBundledVersion, !manager.isEmbeddedLaunch { return 2 }
+    return 1
   }
 
   override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
@@ -211,6 +214,20 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
         cell.accessibilityValue = "Installation requested"
         cell.accessibilityHint = "Shows retry and hide status options. iOS handles installation."
       case .current:
+        if indexPath.row == 1 {
+          content.text = openingBundledVersion ? "Opening bundled version…" : "Run bundled version"
+          content.secondaryText = "Included in this native build"
+          content.textProperties.color = !busy ? .tintColor : .secondaryLabel
+          content.image = UIImage(systemName: "shippingbox")
+          cell.accessibilityIdentifier = "expo-drafts-run-bundled"
+          cell.accessibilityHint = "Reloads the version included in this native build. No download is needed."
+          if openingBundledVersion {
+            let spinner = UIActivityIndicatorView(style: .medium)
+            spinner.startAnimating()
+            cell.accessoryView = spinner
+          }
+          break
+        }
         let identity = manager.bundleIdentity(drafts: drafts)
         content.text = identity.title
         content.secondaryText = identity.sourceLabel + (identity.updateID.map { " · " + String($0.prefix(8)) } ?? "")
@@ -286,7 +303,8 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       presentInstallationStatus(at: indexPath)
       return
     case .current:
-      presentBundleDetails()
+      if indexPath.row == 1 { runBundledVersion() }
+      else { presentBundleDetails() }
       return
     case .builds:
       manager.openBuild()
@@ -302,27 +320,44 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     if manager.isCurrent(draft) { dismiss(animated: true); return }
     search.isActive = false
     loadingDraftID = draft.id
-    updateBuildPolling()
-    isModalInPresentation = true
-    navigationItem.rightBarButtonItem?.isEnabled = false
-    search.searchBar.isUserInteractionEnabled = false
-    refreshControl?.isEnabled = false
-    reloadTable()
+    updateOperationControls()
     manager.launch(draft) { [weak self] result in
       guard let self else { return }
       self.loadingDraftID = nil
-      self.isModalInPresentation = false
-      self.navigationItem.rightBarButtonItem?.isEnabled = true
-      self.search.searchBar.isUserInteractionEnabled = true
-      self.refreshControl?.isEnabled = true
-      self.reloadTable()
-      self.updateBuildPolling()
+      self.updateOperationControls()
       switch result {
       case .success: self.dismiss(animated: true)
       case .failure(let error):
         let alert = UIAlertController(title: "Couldn't Open Draft", message: error.localizedDescription, preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "Refresh Drafts", style: .default) { [weak self] _ in self?.refreshCatalog() })
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        self.present(alert, animated: true)
+      }
+    }
+  }
+
+  private func updateOperationControls() {
+    updateBuildPolling()
+    isModalInPresentation = busy
+    navigationItem.rightBarButtonItem?.isEnabled = !busy
+    search.searchBar.isUserInteractionEnabled = !busy
+    refreshControl?.isEnabled = !busy
+    reloadTable()
+  }
+
+  private func runBundledVersion() {
+    search.isActive = false
+    openingBundledVersion = true
+    updateOperationControls()
+    manager.launchEmbedded { [weak self] result in
+      guard let self else { return }
+      self.openingBundledVersion = false
+      self.updateOperationControls()
+      switch result {
+      case .success: self.dismiss(animated: true)
+      case .failure(let error):
+        let alert = UIAlertController(title: "Couldn't Open Bundled Version", message: error.localizedDescription, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .cancel))
         self.present(alert, animated: true)
       }
     }

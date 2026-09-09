@@ -124,6 +124,49 @@ final class DraftsUpdateTransaction {
     } catch { completion(.failure(error)) }
   }
 
+  /// Select the signed bundle without a network request. The caller first restores
+  /// the original request headers; keeping that binding lets an older published
+  /// draft load again when the user later selects its distinct request headers.
+  func prepareEmbeddedLaunch(expectedID: String, completion: @escaping (Result<Void, Error>) -> Void) {
+    do {
+      let launchConfig = try UpdatesConfig.configWithExpoPlist(mergingOtherDictionary: nil)
+      guard let expectedUUID = UUID(uuidString: expectedID),
+        UUID(uuidString: snapshot.expectedID) == expectedUUID,
+        UUID(uuidString: snapshot.embeddedID ?? "") == expectedUUID,
+        let embeddedUpdate, embeddedUpdate.updateId == expectedUUID,
+        embeddedUpdate.scopeKey == launchConfig.scopeKey,
+        snapshot.scopeKey == launchConfig.scopeKey,
+        embeddedUpdate.runtimeVersion == launchConfig.runtimeVersion,
+        embeddedUpdate.url == launchConfig.originalEmbeddedUpdateUrl,
+        launchConfig.updateUrl == launchConfig.originalEmbeddedUpdateUrl else {
+        throw DraftsError.message("The bundled update does not match this native build. Reopen the app and try again.")
+      }
+      guard snapshot.nextHeaders == launchConfig.originalEmbeddedRequestHeaders,
+        launchConfig.requestHeaders == snapshot.nextHeaders,
+        snapshot.nextHeaders["expo-drafts-selection"] == "embedded" else {
+        throw DraftsError.message("Restore this build's bundled update headers before running its bundled version.")
+      }
+      db.databaseQueue.async {
+        do {
+          _ = try self.db.execute(sql: "BEGIN IMMEDIATE;", withArgs: nil)
+          // Expo can reap the embedded row while a downloaded update is running.
+          // Register only the signed bundle's actual UUID, never a catalog update.
+          if try self.db.update(withId: expectedUUID, config: launchConfig) == nil {
+            try self.db.addUpdate(embeddedUpdate, config: launchConfig)
+          }
+          _ = try self.db.execute(sql: "DELETE FROM json_data WHERE scope_key = ?1 AND key IN ('manifestFilters', 'serverDefinedHeaders');", withArgs: [launchConfig.scopeKey])
+          _ = try self.db.execute(sql: "COMMIT;", withArgs: nil)
+          DispatchQueue.main.async {
+            self.prepareLaunch(expectedID: expectedID, completion: completion)
+          }
+        } catch {
+          _ = try? self.db.execute(sql: "ROLLBACK;", withArgs: nil)
+          DispatchQueue.main.async { completion(.failure(error)) }
+        }
+      }
+    } catch { completion(.failure(error)) }
+  }
+
   func commit() {
     UserDefaults.standard.removeObject(forKey: Self.pendingKey)
   }
