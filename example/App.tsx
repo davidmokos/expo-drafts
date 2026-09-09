@@ -7,9 +7,9 @@ const variant = process.env.EXPO_PUBLIC_DRAFT_VARIANT || 'base';
 const themes = {
   base: {
     color: '#d4ef83',
-    label: 'Embedded build',
-    title: 'One build.\nEvery draft.',
-    note: 'Your starting point, bundled into the native app.',
+    label: 'iPhone-only native preview',
+    title: 'A native change.\nReady to try.',
+    note: 'This preview changes the native device family to iPhone. Install its compatible build from the draft picker.',
   },
   amber: {
     color: '#ffb56b',
