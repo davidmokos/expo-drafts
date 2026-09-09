@@ -1,6 +1,6 @@
 # Publishing PR drafts
 
-Each pull request gets an EAS channel such as `draft-pr-42`. The workflow publishes the PR title as the EAS Update message, which the picker uses as its name. Another push publishes a new update on that channel. EAS is the source of truth: the app signs in to Expo and reads channels and their latest iOS updates directly. No GitHub JSON hosting or publisher token in the app is required.
+Each pull request gets an EAS channel such as `draft-pr-42`. The workflow publishes the PR title as the EAS Update message, which the picker uses as its name. Another push publishes a new update on that channel. A successful same-repository PR publication automatically starts the matching native-build lookup; ordinary JavaScript-only changes reuse an existing build. EAS is the source of truth: the app signs in to Expo and reads channels and their latest iOS updates directly. No GitHub JSON hosting or publisher token in the app is required.
 
 The picker reads the latest update without filtering by the installed runtime. This keeps a PR with native changes visible as incompatible instead of silently substituting an older compatible update. Before downloading, it compares the selected runtime with the native build. After fetching, it verifies the exact manifest update ID. If another agent published meanwhile, refresh the picker before trying again.
 
@@ -18,12 +18,20 @@ The GitHub dispatcher verifies the EAS project, channel, source commit, and retu
 
 EAS CLI uploads the local source archive when `--ref` is omitted, so this setup does not require an Expo GitHub app installation or project/repository link. The archive contains the PR checkout's Git metadata. The trusted control checkout and generated output files are sibling directories outside that repository and are excluded from the archive. Native EAS GitHub triggers are not also enabled. See [EAS workflow execution](https://docs.expo.dev/eas/cli/#eas-workflowrun-file).
 
-Publications run concurrently across channels. EAS uses a concurrency group derived from the channel with `cancel_in_progress: true`, so a new publication cancels an older EAS run for the same PR. GitHub also cancels its obsolete dispatcher, and an interrupted waiter requests cancellation of its verified EAS run. Transient observation failures retry the same run with bounded backoff. The waiter times out after 45 minutes.
+Publications run concurrently across PRs. GitHub cancels an obsolete dispatcher for the same PR, and its cancellation step requests cancellation of that verified EAS publication. Transient observation failures retry the same run with bounded backoff. The waiter times out after 45 minutes. EAS does not currently enforce custom concurrency groups; native build serialization happens in GitHub.
+
+## Automatic native builds
+
+A separate `workflow_run` trigger in [`.github/workflows/native-build.yml`](../.github/workflows/native-build.yml) observes successful **Publish PR draft** runs. It reads trusted control code from the default branch and validates the upstream workflow, repository, PR source, bounded publication report, EAS workflow output, and latest EAS update before checking out source. Fork publications are rejected. Closed PRs and superseded publications skip the build request. Manual publication runs do not automatically create native builds.
+
+GitHub serializes build jobs by EAS project, iOS platform, build profile, and native runtime with `cancel-in-progress: false`. EAS `get-build` reuses a matching completed build or waits for a matching build already running. Only a missing match starts a native build. Multiple PRs can share one build, and a later JavaScript push does not cancel it. GitHub may replace a pending duplicate in the same concurrency group; its newer request still ensures the shared runtime has a build.
+
+Automatic requests reuse the existing ad hoc provisioning profile with `refresh_ad_hoc_provisioning_profile: false`. Manual build requests retain the refresh option for newly registered devices. EAS build credentials and the existing GitHub `EXPO_TOKEN` secret must already be configured. The independent native-build workflow exposes failures separately from successful update publication.
 
 ## Enable the workflow
 
 1. Add an Expo access token with permission to publish updates for the project as the repository secret `EXPO_TOKEN`. A dedicated robot with a publishing role limits access to the owning Expo account; a personal token has access to all accounts available to its owner. See Expo's [programmatic access guide](https://docs.expo.dev/accounts/programmatic-access/) and [GitHub Actions setup](https://docs.expo.dev/eas-update/github-actions/).
-2. Keep `.github/workflows/drafts.yml` and `cli/` on the default branch. Include `example/.eas/workflows/publish-draft.yml` on each PR branch. The dispatcher uses the default branch's control scripts and needs only `contents: read`.
+2. Keep both `.github/workflows/drafts.yml` and `.github/workflows/native-build.yml`, along with `cli/`, on the default branch. Include `example/.eas/workflows/publish-draft.yml` on each PR branch. The publication dispatcher needs `contents: read`; the independent build workflow also reads Actions artifacts and build-request issues.
 3. Open or push to a PR from a branch in this repository. You can also run **Publish PR draft** manually from the Actions page, supplying a channel and title.
 4. Sign in to Expo in the preview app with an account that can access the project, then refresh the picker. Each reviewer uses their own Expo session; the CI token remains in GitHub Actions.
 

@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
 import { setTimeout } from 'node:timers/promises';
+import { createHash } from 'node:crypto';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SHA = /^[0-9a-f]{40}$/i;
@@ -143,6 +144,20 @@ export async function githubJson(path, { token = process.env.GH_TOKEN, fetchImpl
   return response.json();
 }
 
+export function nativeBuildConcurrencyKey(request) {
+  return `expo-drafts-native-${createHash('sha256').update(JSON.stringify([
+    request.projectId.toLowerCase(), request.platform, request.profile, request.runtimeVersion,
+  ])).digest('hex')}`;
+}
+
+export function profileRefreshForEvent(event) {
+  if (event.workflow_run) return 'false';
+  if (event.issue) return 'true';
+  const value = event.inputs?.refresh_ad_hoc_provisioning_profile ?? 'true';
+  if (![true, false, 'true', 'false'].includes(value)) throw new Error('Invalid profile refresh option.');
+  return String(value);
+}
+
 async function main() {
   const { values } = parseArgs({ options: {
     'event-file': { type: 'string' }, output: { type: 'string' },
@@ -154,27 +169,39 @@ async function main() {
   }
   const event = JSON.parse(await readFile(values['event-file'] ?? process.env.GITHUB_EVENT_PATH, 'utf8'));
   if (event.repository?.full_name?.toLowerCase() !== repository.toLowerCase()) throw new Error('Wrong request repository.');
-  const actor = event.sender?.login;
-  if (!/^[a-zA-Z0-9-]+(?:\[bot\])?$/.test(actor ?? '')) throw new Error('Missing GitHub request actor.');
-  const access = await githubJson(`/repos/${repository}/collaborators/${encodeURIComponent(actor)}/permission`);
-  validatePermission(access.permission);
-  // workflow_dispatch is available for validating the pipeline without a browser.
-  const raw = event.issue ? parseBuildRequest(event.issue.body) : {
-    schemaVersion: 1, projectId: values['project-id'],
-    channel: event.inputs?.channel, updateId: event.inputs?.update_id,
-    runtimeVersion: event.inputs?.runtime_version,
-  };
-  const request = parseBuildRequest(`\`\`\`expo-drafts-build-request\n${JSON.stringify(raw)}\n\`\`\``);
-  const app = await fetchBuildRequestSource(values['project-id'], request.channel);
-  const verified = validateBuildRequest(request, app, { projectId: values['project-id'], permission: access.permission });
-  if (verified.pullRequest) {
-    const pr = await githubJson(`/repos/${repository}/pulls/${verified.pullRequest}`);
-    if (pr.head?.repo?.full_name?.toLowerCase() !== repository.toLowerCase() || pr.head?.sha !== verified.gitCommitHash) {
-      throw new Error('The PR source changed or belongs to a fork. Wait for publication and refresh drafts.');
+  const refreshProfile = profileRefreshForEvent(event);
+  let verified;
+  if (event.workflow_run) {
+    const { buildRequestFromPublication } = await import('./publication-build-request.mjs');
+    verified = await buildRequestFromPublication(event, { repository, projectId: values['project-id'] });
+    if (!verified) {
+      if (process.env.GITHUB_OUTPUT) await appendFile(process.env.GITHUB_OUTPUT, 'should_build=false\n');
+      process.stdout.write('Publication was superseded or its PR closed; no native build requested.\n');
+      return;
     }
+  } else {
+    const actor = event.sender?.login;
+    if (!/^[a-zA-Z0-9-]+(?:\[bot\])?$/.test(actor ?? '')) throw new Error('Missing GitHub request actor.');
+    const access = await githubJson(`/repos/${repository}/collaborators/${encodeURIComponent(actor)}/permission`);
+    validatePermission(access.permission);
+    // workflow_dispatch is available for validating the pipeline without a browser.
+    const raw = event.issue ? parseBuildRequest(event.issue.body) : {
+      schemaVersion: 1, projectId: values['project-id'],
+      channel: event.inputs?.channel, updateId: event.inputs?.update_id,
+      runtimeVersion: event.inputs?.runtime_version,
+    };
+    const request = parseBuildRequest(`\`\`\`expo-drafts-build-request\n${JSON.stringify(raw)}\n\`\`\``);
+    const app = await fetchBuildRequestSource(values['project-id'], request.channel);
+    verified = validateBuildRequest(request, app, { projectId: values['project-id'], permission: access.permission });
+    if (verified.pullRequest) {
+      const pr = await githubJson(`/repos/${repository}/pulls/${verified.pullRequest}`);
+      if (pr.head?.repo?.full_name?.toLowerCase() !== repository.toLowerCase() || pr.head?.sha !== verified.gitCommitHash) {
+        throw new Error('The PR source changed or belongs to a fork. Wait for publication and refresh drafts.');
+      }
+    }
+    const commit = await githubJson(`/repos/${repository}/commits/${verified.gitCommitHash}`);
+    if (commit.sha !== verified.gitCommitHash) throw new Error('Preview source is unavailable in this repository.');
   }
-  const commit = await githubJson(`/repos/${repository}/commits/${verified.gitCommitHash}`);
-  if (commit.sha !== verified.gitCommitHash) throw new Error('Preview source is unavailable in this repository.');
   const runId = process.env.GITHUB_RUN_ID;
   const attempt = process.env.GITHUB_RUN_ATTEMPT ?? '1';
   if (!/^\d+$/.test(runId ?? '') || !/^\d+$/.test(attempt)) throw new Error('Missing GitHub workflow identity.');
@@ -188,7 +215,9 @@ async function main() {
   };
   await writeFile(values.output, `${JSON.stringify(result, null, 2)}\n`);
   if (process.env.GITHUB_OUTPUT) {
-    await appendFile(process.env.GITHUB_OUTPUT, `git_commit=${result.gitCommitHash}\nruntime=${result.runtimeVersion}\n`);
+    await appendFile(process.env.GITHUB_OUTPUT,
+      `should_build=true\ngit_commit=${result.gitCommitHash}\nruntime=${result.runtimeVersion}\n` +
+      `concurrency_key=${nativeBuildConcurrencyKey(result)}\nrefresh_profile=${refreshProfile}\n`);
   }
   process.stdout.write(`Validated build request for ${result.channel}, runtime ${result.runtimeVersion}.\n`);
 }
