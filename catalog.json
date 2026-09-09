@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T15:30:27.711Z",
+  "generatedAt": "2026-09-09T15:30:48.332Z",
   "drafts": [
     {
       "id": "bb91d438-412f-4a28-a106-cbd9c4a2f9de",
@@ -67,6 +67,27 @@
       ]
     },
     {
+      "id": "fd4866cc-ef32-4c85-9761-83ee52d49bce",
+      "name": "[example] Focus timer",
+      "channel": "draft-pr-3",
+      "branch": "draft-pr-3",
+      "message": "[example] Focus timer",
+      "createdAt": "2026-09-09T15:29:51.529Z",
+      "gitCommitHash": "3b3e86e3704e2cc7615bc24abc6007f7057718b5",
+      "pullRequest": {
+        "number": 3,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/3"
+      },
+      "updates": [
+        {
+          "id": "01a086ca-2ba9-7cc0-aab5-e370c8d49ed8",
+          "groupId": "fd4866cc-ef32-4c85-9761-83ee52d49bce",
+          "platform": "ios",
+          "runtimeVersion": "8bc256182be4455e53cb429fb3771559e0ee5a7c"
+        }
+      ]
+    },
+    {
       "id": "c8baf2b3-2e4e-4d89-89bf-2baa0c99c231",
       "name": "[example] Reading list",
       "channel": "draft-pr-2",
@@ -84,27 +105,6 @@
           "groupId": "c8baf2b3-2e4e-4d89-89bf-2baa0c99c231",
           "platform": "ios",
           "runtimeVersion": "8bc256182be4455e53cb429fb3771559e0ee5a7c"
-        }
-      ]
-    },
-    {
-      "id": "535d29ba-9765-4622-a1e7-ac304179e94d",
-      "name": "[example] Focus timer",
-      "channel": "draft-pr-3",
-      "branch": "draft-pr-3",
-      "message": "[example] Focus timer",
-      "createdAt": "2026-09-09T15:22:35.448Z",
-      "gitCommitHash": "3cdb31b026fdb03a199fa4fc16c8bbc2d83d911b",
-      "pullRequest": {
-        "number": 3,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/3"
-      },
-      "updates": [
-        {
-          "id": "01a086c3-8438-703e-9007-1efe1fed2ec5",
-          "groupId": "535d29ba-9765-4622-a1e7-ac304179e94d",
-          "platform": "ios",
-          "runtimeVersion": "dd91e77e18e222b089faec779acba7efc0c25182"
         }
       ]
     },
