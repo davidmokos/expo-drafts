@@ -1,9 +1,10 @@
 import Foundation
 import UIKit
 import EXUpdates
+import EXUpdatesInterface
 
 /// This object and its window belong to the application, outside the React lifecycle.
-final class ExpoDraftsManager {
+final class ExpoDraftsManager: UpdatesStateChangeListener {
   static let shared = ExpoDraftsManager()
   private var window: DraftsWindow?
   private var visible = true
@@ -23,6 +24,23 @@ final class ExpoDraftsManager {
   private(set) var buildsCatalog: DraftBuildCatalog?
   private(set) var buildsCatalogLoading = false
   private(set) var buildsCatalogError: String?
+  static let installationDidChange = Notification.Name("expo-drafts.installation-did-change")
+  private var contentObserver: NSObjectProtocol?
+  private var contentHasAppeared = false
+  private var updatesSubscription: UpdatesStateChangeSubscription?
+  private var offeredResumeRequest: DraftInstallationRequest?
+  private(set) var resumingInstallation = false
+  private var resumingRequest: DraftInstallationRequest?
+  private(set) var installationResumeError: String?
+
+  private init() {
+    contentObserver = NotificationCenter.default.addObserver(
+      forName: Notification.Name("RCTContentDidAppearNotification"), object: nil, queue: .main
+    ) { [weak self] _ in
+      self?.contentHasAppeared = true
+      self?.scheduleInstallationResume()
+    }
+  }
 
   var enabled: Bool { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsEnabled") as? Bool ?? false }
   var projectID: String { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsProjectID") as? String ?? "" }
@@ -38,7 +56,12 @@ final class ExpoDraftsManager {
     expoSession.signIn(presenting: controller, completion: completion)
   }
 
-  func signOut() {
+  func signOut(cancelPendingInstallation: Bool = true) {
+    if cancelPendingInstallation {
+      resumingInstallation = false
+      resumingRequest = nil
+      dismissInstallationStatus()
+    }
     catalogGeneration = UUID()
     buildsCatalogGeneration = UUID()
     easClient.cancel()
@@ -53,7 +76,7 @@ final class ExpoDraftsManager {
   private func handleDiscoveryError(_ error: Error) {
     guard let error = error as? DraftEASError else { return }
     if error.requiresSignIn {
-      signOut()
+      signOut(cancelPendingInstallation: false)
     } else if error.invalidatesCachedData {
       catalogGeneration = UUID()
       buildsCatalogGeneration = UUID()
@@ -70,7 +93,7 @@ final class ExpoDraftsManager {
   }
 
   private var constants: [String: Any?] {
-    guard AppController.isInitialized() else { return [:] }
+    guard AppController.isInitialized(), AppController.sharedInstance.isStarted else { return [:] }
     return AppController.sharedInstance.getConstantsForModule().toModuleConstantsMap()
   }
 
@@ -89,8 +112,142 @@ final class ExpoDraftsManager {
     installationState.active(projectID: projectID, currentRuntime: runtimeVersion)
   }
 
+  var pendingDraftResume: DraftInstallationResume? {
+    installationState.pendingResume(projectID: projectID, currentRuntime: runtimeVersion)
+  }
+
   func dismissInstallationStatus() {
     installationState.clear()
+    installationResumeError = nil
+    offeredResumeRequest = nil
+    notifyInstallationChanged()
+  }
+
+  private func notifyInstallationChanged() {
+    NotificationCenter.default.post(name: Self.installationDidChange, object: self)
+  }
+
+  private func scheduleInstallationResume() {
+    DispatchQueue.main.async { [weak self] in self?.resumeInstalledDraft() }
+  }
+
+  func observeUpdatesStartup() {
+    guard updatesSubscription == nil, AppController.isInitialized(),
+      let controller = AppController.sharedInstance as? EnabledAppController else { return }
+    updatesSubscription = controller.subscribeToUpdatesStateChanges(self)
+  }
+
+  func updatesStateDidChange(_ event: [String: Any]) {
+    if event["type"] as? String == "endStartup" { scheduleInstallationResume() }
+  }
+
+  func resumeInstalledDraft(explicitRetry: Bool = false) {
+    precondition(Thread.isMainThread)
+    guard enabled, UIApplication.shared.applicationState == .active, contentHasAppeared,
+      !resumingInstallation, !switching, !preparingInstallation,
+      AppController.isInitialized(), AppController.sharedInstance.isStarted,
+      AppController.sharedInstance is EnabledAppController else { return }
+    let current = constants
+    guard let updateID = current["updateId"] as? String, !updateID.isEmpty,
+      let context = current["initialContext"] as? [String: Any],
+      context["isStartupProcedureRunning"] as? Bool == false,
+      let resume = pendingDraftResume, resume.isTargetRuntime else { return }
+    let request = resume.request
+    if installationState.finishResume(expected: request, projectID: projectID,
+      currentRuntime: runtimeVersion, launchedUpdateID: updateID) {
+      installationResumeError = nil
+      notifyInstallationChanged()
+      return
+    }
+    guard !usesEASDiscovery || isSignedIn else {
+      if offeredResumeRequest != request {
+        offeredResumeRequest = request
+        open()
+      }
+      notifyInstallationChanged()
+      return
+    }
+    guard explicitRetry || (resume.canResumeAutomatically && installationResumeError == nil) else {
+      if offeredResumeRequest != request {
+        offeredResumeRequest = request
+        open()
+      }
+      return
+    }
+    do {
+      guard try installationState.beginResume(expected: request, projectID: projectID,
+        currentRuntime: runtimeVersion, explicitRetry: explicitRetry) else { return }
+    } catch {
+      installationResumeError = error.localizedDescription
+      offeredResumeRequest = request
+      open()
+      notifyInstallationChanged()
+      return
+    }
+    resumingInstallation = true
+    resumingRequest = request
+    // A build-status failure must not cancel the independent resume lookup.
+    // Invalidate older discovery callbacks before starting that lookup.
+    catalogGeneration = UUID()
+    buildsCatalogGeneration = UUID()
+    catalogTask?.cancel()
+    buildsCatalogTask?.cancel()
+    easClient.cancel()
+    buildsCatalogLoading = false
+    installationResumeError = nil
+    offeredResumeRequest = request
+    open()
+    notifyInstallationChanged()
+    // Revalidate project access and exact publication before using the saved selection.
+    // Picker refreshes are disabled during this operation, so they cannot cancel it.
+    fetchCatalog(forInstallationResume: true) { [weak self] result in
+      guard let self, self.resumingRequest == request else { return }
+      guard self.pendingDraftResume?.request == request else {
+        self.resumingInstallation = false
+        self.resumingRequest = nil
+        self.notifyInstallationChanged()
+        return
+      }
+      switch result {
+      case .failure(let error): self.finishInstallationResume(request, result: .failure(error))
+      case .success(let catalog):
+        guard let draft = catalog.drafts.first(where: {
+          $0.channel == request.channel &&
+          $0.iosUpdate?.id.lowercased() == request.updateID?.lowercased() &&
+          $0.iosUpdate?.runtimeVersion == request.targetRuntime
+        }) else {
+          self.finishInstallationResume(request, result: .failure(DraftsError.message(
+            "The selected publication is no longer the latest draft. Choose a draft from the list to continue."
+          )))
+          return
+        }
+        self.launch(draft, continuingInstallation: true) { [weak self] result in
+          self?.finishInstallationResume(request, result: result)
+        }
+      }
+    }
+  }
+
+  private func finishInstallationResume(_ request: DraftInstallationRequest, result: Result<Void, Error>) {
+    guard resumingRequest == request else { return }
+    resumingInstallation = false
+    resumingRequest = nil
+    guard pendingDraftResume?.request == request else { notifyInstallationChanged(); return }
+    switch result {
+    case .success:
+      if installationState.finishResume(expected: request, projectID: projectID,
+        currentRuntime: runtimeVersion, launchedUpdateID: currentUpdateID) {
+        installationResumeError = nil
+        picker?.dismiss(animated: true)
+      } else {
+        installationResumeError = "The selected draft did not finish opening. Try again."
+        _ = try? installationState.recordResumeFailure(expected: request, projectID: projectID, currentRuntime: runtimeVersion)
+      }
+    case .failure(let error):
+      installationResumeError = error.localizedDescription
+      _ = try? installationState.recordResumeFailure(expected: request, projectID: projectID, currentRuntime: runtimeVersion)
+    }
+    notifyInstallationChanged()
   }
 
   func bundleIdentity(drafts: [DraftEntry]) -> DraftBundleIdentity {
@@ -114,6 +271,7 @@ final class ExpoDraftsManager {
 
   func install() {
     guard enabled else { return }
+    observeUpdatesStartup()
     guard let scene = UIApplication.shared.connectedScenes
       .compactMap({ $0 as? UIWindowScene })
       .first(where: { $0.activationState == .foregroundActive }) else { return }
@@ -122,6 +280,7 @@ final class ExpoDraftsManager {
       window = DraftsWindow(windowScene: scene, onOpen: { [weak self] in self?.open() })
     }
     window?.isHidden = !visible
+    scheduleInstallationResume()
   }
 
   func setVisible(_ value: Bool) {
@@ -146,7 +305,11 @@ final class ExpoDraftsManager {
     root.present(navigation, animated: true)
   }
 
-  func fetchCatalog(completion: @escaping (Result<DraftCatalog, Error>) -> Void) {
+  func fetchCatalog(forInstallationResume: Bool = false, completion: @escaping (Result<DraftCatalog, Error>) -> Void) {
+    guard !resumingInstallation || forInstallationResume else {
+      completion(.failure(DraftsError.message("Wait for the installed draft to finish opening.")))
+      return
+    }
     catalogTask?.cancel()
     let generation = UUID()
     catalogGeneration = generation
@@ -229,6 +392,7 @@ final class ExpoDraftsManager {
   /// Build metadata is optional. A missing or unavailable catalog never changes whether
   /// an EAS Update can run in the installed native build.
   func fetchBuildCatalog(completion: @escaping () -> Void) {
+    guard !resumingInstallation else { completion(); return }
     buildsCatalogTask?.cancel()
     buildsCatalogTask = nil
     let generation = UUID()
@@ -327,7 +491,7 @@ final class ExpoDraftsManager {
 
   func installBuild(for draft: DraftEntry, completion: @escaping (Error?) -> Void) {
     precondition(Thread.isMainThread)
-    guard !switching, !preparingInstallation else {
+    guard !switching, !preparingInstallation, !resumingInstallation else {
       completion(DraftsError.message("Wait for the current draft action to finish."))
       return
     }
@@ -358,25 +522,33 @@ final class ExpoDraftsManager {
           self.preparingInstallation = false
           completion(error)
         case .success(let installerURL):
+          let pending = DraftInstallationRequest(
+            projectID: self.projectID, sourceRuntime: sourceRuntime,
+            targetRuntime: update.runtimeVersion, buildID: buildID,
+            draftID: draft.id, name: draft.name, requestedAt: Date(),
+            updateID: update.id, channel: draft.channel
+          )
+          do { try self.installationState.save(pending) }
+          catch {
+            self.preparingInstallation = false
+            completion(error)
+            return
+          }
+          self.installationResumeError = nil
+          self.offeredResumeRequest = nil
           // A successful open only hands the manifest to iOS. Installation may be
           // cancelled or fail later; the app must not record it as completed.
           UIApplication.shared.open(installerURL, options: [:]) { success in
             DispatchQueue.main.async {
               self.preparingInstallation = false
               guard success else {
+                _ = self.installationState.clear(expected: pending)
+                self.notifyInstallationChanged()
                 completion(DraftsError.message("iOS could not open the installer. Try again on a registered physical device."))
                 return
               }
-              do {
-                try self.installationState.save(DraftInstallationRequest(
-                  projectID: self.projectID, sourceRuntime: sourceRuntime,
-                  targetRuntime: update.runtimeVersion, buildID: buildID,
-                  draftID: draft.id, name: draft.name, requestedAt: Date()
-                ))
-                completion(nil)
-              } catch {
-                completion(DraftsError.message("iOS opened the installer, but the request status could not be saved. After confirming Install, go to the Home Screen and reopen the app when installation finishes."))
-              }
+              self.notifyInstallationChanged()
+              completion(nil)
             }
           }
         }
@@ -401,7 +573,11 @@ final class ExpoDraftsManager {
     draft.iosUpdate?.id.lowercased() == currentUpdateID
   }
 
-  func launch(_ draft: DraftEntry, completion: @escaping (Result<Void, Error>) -> Void) {
+  func launch(_ draft: DraftEntry, continuingInstallation: Bool = false, completion: @escaping (Result<Void, Error>) -> Void) {
+    guard !resumingInstallation || continuingInstallation else {
+      completion(.failure(DraftsError.message("Wait for the installed draft to finish opening.")))
+      return
+    }
     guard !switching else {
       completion(.failure(DraftsError.message("Another bundle is already opening.")))
       return
@@ -425,6 +601,7 @@ final class ExpoDraftsManager {
       completion(.failure(DraftsError.message("The native update endpoint belongs to a different EAS project. Check the build configuration.")))
       return
     }
+    if !continuingInstallation { dismissInstallationStatus() }
     if isCurrent(draft) { completion(.success(())); return }
     var nextHeaders = controller.requestHeaders ?? [:]
     nextHeaders["expo-channel-name"] = draft.channel
@@ -436,7 +613,7 @@ final class ExpoDraftsManager {
   }
 
   func launchEmbedded(completion: @escaping (Result<Void, Error>) -> Void) {
-    guard !switching, !preparingInstallation else {
+    guard !switching, !preparingInstallation, !resumingInstallation else {
       completion(.failure(DraftsError.message("Wait for the current operation to finish before opening the bundled version.")))
       return
     }
@@ -446,6 +623,7 @@ final class ExpoDraftsManager {
       completion(.failure(DraftsError.message("This native build has no bundled version available.")))
       return
     }
+    dismissInstallationStatus()
     if isEmbeddedLaunch { completion(.success(())); return }
     do {
       let config = try UpdatesConfig.configWithExpoPlist(mergingOtherDictionary: nil)

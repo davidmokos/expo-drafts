@@ -4,6 +4,35 @@ This record covers the native example app and its PR previews, and preserves val
 
 The app uses Expo SDK 57, React Native 0.86.3, and expo-updates 57.0.21. Its EAS project is [@mokosdavid/expo-drafts-lab](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab), and its bundle identifier is `dev.davidmokos.draftslab`.
 
+## Publication order and timestamps
+
+Commit [`38a6cf2`](https://github.com/davidmokos/expo-drafts/commit/38a6cf2227bfb7f6c8c229bebf97e27eaf06155b) sorts the latest iOS update on each channel by its actual publication instant, newest first. Cached catalogs and refreshed EAS responses use the same comparison. Equal timestamps use channel and ID to keep the order stable. Each native row includes its localized publication date and time, including seconds, alongside the channel or build status and in its accessibility label. Invalid dates from a custom catalog appear last with an unavailable-time label; EAS responses still reject invalid publication dates.
+
+All 42 Node tests, the native Swift suites, the Release simulator build, and [main CI](https://github.com/davidmokos/expo-drafts/actions/runs/34388574703) passed. Six catalog test groups cover offsets, fractional seconds, equal-time ties, invalid custom dates, and independence from names or native compatibility. An EAS regression checks ordering across response pages. The shared simulator runtime is `8a743208811cf520fdd423e4678b2ea15d332b7b`.
+
+The simulator picker showed local UTC+02:00 publication times, including seconds, on long titles and incompatible rows without clipping. Pull to refresh preserved the same actual-time order. After all five automatic PR publications completed, their native row labels matched the exact EAS publication times in Europe/Warsaw. The refreshed order was PR #4, #5, #2, #1, #3. Color Studio and Reading List both launched over EAS Update; selecting Reading List kept it in third position. Returning to the embedded bundle restored `2eac964c-5886-4500-87b7-2248fdf1d4af`. This used the existing QA-only Expo Keychain fixture; it does not establish a new browser sign-in test.
+
+The user's September 9 screenshot shows the previous shared build's bundled ID `f49fe983` running on their phone. Its order was already correct for those EAS publications: Reading List at 17:46:47 UTC, then PR Library at 17:44:45, iPhone-only at 17:44:39, Color Studio at 17:44:36, and Focus Timer at 17:44:34. The new comparison fixes timestamp-format edge cases; it does not sort by PR number.
+
+All five PR publication workflows and checks succeeded at these source commits; live EAS reads verified the channel, exact update, runtime, and source. PRs #1–4 share `8a743208811cf520fdd423e4678b2ea15d332b7b`; PR #5 retains its iPhone-only runtime `7997c404992219f159f865969505cb9be91ad59d`.
+
+| PR | Channel | Source | iOS update ID | Workflow |
+| --- | --- | --- | --- | --- |
+| [#1](https://github.com/davidmokos/expo-drafts/pull/1) | `draft-pr-1` | [`298e58a`](https://github.com/davidmokos/expo-drafts/commit/298e58af0f27fc78b8fd83efa02580e78fee4cc2) | `01a0876b-f1dc-795e-a7fd-a5247116e9d7` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0876a-87a6-728d-85fc-5901dbb792cf) |
+| [#2](https://github.com/davidmokos/expo-drafts/pull/2) | `draft-pr-2` | [`92121ec`](https://github.com/davidmokos/expo-drafts/commit/92121ecb0403922dc73bd892306381f73debd596) | `01a0876c-09c4-7ecf-ae27-6c53c1071c55` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0876a-a50e-7ae4-b6e9-7cb129daabfc) |
+| [#3](https://github.com/davidmokos/expo-drafts/pull/3) | `draft-pr-3` | [`3b24243`](https://github.com/davidmokos/expo-drafts/commit/3b242438f696f4f5e4953a517cce1d6a2b52cbea) | `01a0876b-e6e0-7828-b074-0f25b67dc5ec` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0876a-7e33-7b3e-a7f2-bd4fd63e9adb) |
+| [#4](https://github.com/davidmokos/expo-drafts/pull/4) | `draft-pr-4` | [`55f735f`](https://github.com/davidmokos/expo-drafts/commit/55f735fa44b378605cc35aa7a7bb0ec03c540fcf) | `01a0876c-49c3-7f51-b592-f9c6614ee7d8` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0876a-ea7e-70d4-bc7d-ba2d5bb598aa) |
+| [#5](https://github.com/davidmokos/expo-drafts/pull/5) | `draft-pr-5` | [`a804504`](https://github.com/davidmokos/expo-drafts/commit/a8045044f430586d282c5afb77c5e24c6d437d9f) | `01a0876c-3362-72c4-b190-878afb9f2f75` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0876a-d8e0-7986-9bc7-b7cf4043b87c) |
+
+Both replacement device builds succeeded with the existing ad hoc profile (`refresh_ad_hoc_provisioning_profile: false`). Downloaded archives passed strict signature verification, exact source and runtime checks, registered-phone provisioning, callback configuration, and all 29 framework dependencies across nine Mach-O images.
+
+| Native build | Embedded update | Successful CI |
+| --- | --- | --- |
+| [Shared, PRs #1–4](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/a322d923-e00e-436f-a988-bebfb0a8017b) | `d7bda380-87b0-4f34-a58b-1bc7f538cc05` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0876e-8929-7c5b-bbed-1eb5a050a295) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34389193188) |
+| [PR #5, iPhone only](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/45a09066-23e3-43ac-9972-0c39913b4859) | `99d8c0fe-4c3a-40e8-8302-0932fcb610a8` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0876e-23cc-7fc7-bb68-77ad4ae370eb) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34389137908) |
+
+The verified shared archive was installed successfully over USB on the user's iPhone and launched as process `23832`. The install retained the existing app data. Device UI interaction was not repeated; timestamp rendering, chronology after refresh and selection, and switching were tested on the simulator. The temporary simulator account was signed out and its automation servers stopped after testing.
+
 ## Native example app and PR previews
 
 Commit [`67f4767`](https://github.com/davidmokos/expo-drafts/commit/67f47679aeeb604309960667d8643e10ee01444f) replaces the example's single-screen demos with four native tabs: Library, Focus, Studio, and Settings. Expo Router supplies the tab bar and navigation headers. `@expo/ui` supplies the forms and controls, including the iOS color picker. Every preview keeps all four screens; `example/src/data/preview.ts` selects its initial tab, content, colors, and timer defaults.

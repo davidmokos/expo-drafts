@@ -17,6 +17,7 @@ Pod::Spec.new do |s|
 
   s.dependency 'ExpoModulesCore'
   s.dependency 'EXUpdates'
+  s.dependency 'EXUpdatesInterface'
 
   # Swift/Objective-C compatibility
   s.pod_target_xcconfig = {

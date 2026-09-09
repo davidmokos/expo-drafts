@@ -21,8 +21,8 @@ on:
         required: true
         description: GitHub Actions run that dispatched this publication
 
-# This is EAS concurrency, so canceling an obsolete GitHub job cannot leave an
-# older EAS publication running behind the latest commit for the same PR.
+# GitHub cancels obsolete PR jobs; their CLI cancellation helper stops EAS runs.
+# EAS currently treats custom group names as placeholders, not enforced locks.
 concurrency:
   group: expo-drafts-${{ inputs.channel }}
   cancel_in_progress: true
