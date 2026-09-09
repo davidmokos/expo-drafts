@@ -23,6 +23,7 @@ public class ExpoDraftsAppDelegateSubscriber: ExpoAppDelegateSubscriber {
   public func subscriberDidRegister() {
     if ExpoDraftsManager.shared.enabled {
       DraftsUpdateTransaction.recoverPendingSelection()
+      ExpoDraftsManager.shared.observeUpdatesStartup()
     }
   }
 
