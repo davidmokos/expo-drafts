@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T15:23:07.351Z",
+  "generatedAt": "2026-09-09T15:24:41.249Z",
   "drafts": [
+    {
+      "id": "652c1de4-e3cf-493d-a757-84243fcc04e4",
+      "name": "[example] iPhone-only native preview",
+      "channel": "draft-pr-5",
+      "branch": "draft-pr-5",
+      "message": "[example] iPhone-only native preview",
+      "createdAt": "2026-09-09T15:24:20.027Z",
+      "gitCommitHash": "b200d27c36c988b28394550e9869526778024a29",
+      "pullRequest": {
+        "number": 5,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/5"
+      },
+      "updates": [
+        {
+          "id": "01a086c5-1cbb-72e7-b911-807d57a4ff77",
+          "groupId": "652c1de4-e3cf-493d-a757-84243fcc04e4",
+          "platform": "ios",
+          "runtimeVersion": "ae6071d520c876f2945fa84d68722552f0544070"
+        }
+      ]
+    },
     {
       "id": "535d29ba-9765-4622-a1e7-ac304179e94d",
       "name": "[example] Focus timer",
@@ -84,27 +105,6 @@
           "groupId": "a11520d3-3bfd-493e-aa35-7725123f2b6d",
           "platform": "ios",
           "runtimeVersion": "0b52dae850fb723b136dfed86d4051693ab14617"
-        }
-      ]
-    },
-    {
-      "id": "f9e2fe0e-15f3-4fd7-a434-007e05db0124",
-      "name": "[example] iPhone-only native preview",
-      "channel": "draft-pr-5",
-      "branch": "draft-pr-5",
-      "message": "[example] iPhone-only native preview",
-      "createdAt": "2026-09-09T14:10:14.141Z",
-      "gitCommitHash": "9823adebd8a8e79b7056edb502f8eaedcf775cd4",
-      "pullRequest": {
-        "number": 5,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/5"
-      },
-      "updates": [
-        {
-          "id": "01a08681-45fd-7294-85ed-926593be7598",
-          "groupId": "f9e2fe0e-15f3-4fd7-a434-007e05db0124",
-          "platform": "ios",
-          "runtimeVersion": "0d6f42d8d4867b6511c7631dfebef1a6c20ebf4f"
         }
       ]
     },
