@@ -13,6 +13,9 @@ on:
       request_id:
         type: string
         required: true
+      refresh_ad_hoc_provisioning_profile:
+        type: boolean
+        default: true
 
 # Requests for one native runtime share a build. Keep an in-progress build alive.
 concurrency:
@@ -46,4 +49,4 @@ jobs:
       platform: ios
       profile: drafts-device
       message: Draft native runtime ${{ inputs.runtime_version }}
-      refresh_ad_hoc_provisioning_profile: true
+      refresh_ad_hoc_provisioning_profile: ${{ inputs.refresh_ad_hoc_provisioning_profile }}
