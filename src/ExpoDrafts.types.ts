@@ -25,6 +25,29 @@ export type DraftCatalog = {
   drafts: Draft[];
 };
 
+/** Device builds verified by trusted CI. Installation opens the EAS build page. */
+export type DraftBuild = {
+  runtimeVersion: string;
+  platform: 'ios';
+  profile: string;
+  state: 'queued' | 'building' | 'ready' | 'failed';
+  requestId: string;
+  requestedAt: string;
+  updatedAt: string;
+  gitCommitHash: string;
+  buildId?: string;
+  installUrl?: string;
+  requestUrl?: string;
+  statusUrl?: string;
+};
+
+export type DraftBuildCatalog = {
+  schemaVersion: 1;
+  projectId: string;
+  generatedAt: string;
+  builds: DraftBuild[];
+};
+
 export type DraftsState = {
   enabled: boolean;
   runtimeVersion: string | null;
