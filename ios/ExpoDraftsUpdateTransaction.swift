@@ -146,6 +146,7 @@ final class DraftsUpdateTransaction {
         snapshot.nextHeaders["expo-drafts-selection"] == "embedded" else {
         throw DraftsError.message("Restore this build's bundled update headers before running its bundled version.")
       }
+      let headers = String(data: try JSONSerialization.data(withJSONObject: snapshot.nextHeaders, options: .sortedKeys), encoding: .utf8)!
       db.databaseQueue.async {
         do {
           _ = try self.db.execute(sql: "BEGIN IMMEDIATE;", withArgs: nil)
@@ -154,6 +155,9 @@ final class DraftsUpdateTransaction {
           if try self.db.update(withId: expectedUUID, config: launchConfig) == nil {
             try self.db.addUpdate(embeddedUpdate, config: launchConfig)
           }
+          // An embedded cache row can inherit a previous PR's persisted headers.
+          // Bind registration atomically so interrupted recovery can remove it.
+          _ = try self.db.execute(sql: "UPDATE updates SET url = ?1, headers = ?2 WHERE id = ?3 AND scope_key = ?4;", withArgs: [launchConfig.updateUrl.absoluteString, headers, expectedUUID, launchConfig.scopeKey])
           _ = try self.db.execute(sql: "DELETE FROM json_data WHERE scope_key = ?1 AND key IN ('manifestFilters', 'serverDefinedHeaders');", withArgs: [launchConfig.scopeKey])
           _ = try self.db.execute(sql: "COMMIT;", withArgs: nil)
           DispatchQueue.main.async {
