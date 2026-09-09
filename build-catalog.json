@@ -1,6 +1,18 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T11:41:32.606Z",
-  "builds": []
+  "generatedAt": "2026-09-09T11:46:09.136Z",
+  "builds": [
+    {
+      "platform": "ios",
+      "profile": "drafts-device",
+      "runtimeVersion": "bd60359c5e450058d8f98dbde40e5beefb68fe2e",
+      "state": "queued",
+      "requestId": "34347260240-1",
+      "requestedAt": "2026-09-09T11:46:06.094Z",
+      "updatedAt": "2026-09-09T11:46:06.153Z",
+      "gitCommitHash": "474a766febfe5ed87c313ccde4db999569a16fcf",
+      "statusUrl": "https://github.com/davidmokos/expo-drafts/actions/runs/34347260240"
+    }
+  ]
 }
