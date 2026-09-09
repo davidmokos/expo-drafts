@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T11:46:53.462Z",
+  "generatedAt": "2026-09-09T13:14:52.755Z",
   "drafts": [
+    {
+      "id": "38d214be-504a-467b-84eb-65cefb6ced4a",
+      "name": "[example] Reading list",
+      "channel": "draft-pr-2",
+      "branch": "draft-pr-2",
+      "message": "[example] Reading list",
+      "createdAt": "2026-09-09T13:14:31.053Z",
+      "gitCommitHash": "8a32ae393a67fd3056e2b7a602606df723849618",
+      "pullRequest": {
+        "number": 2,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/2"
+      },
+      "updates": [
+        {
+          "id": "01a0864e-430d-746c-9cb7-355ed62108e2",
+          "groupId": "38d214be-504a-467b-84eb-65cefb6ced4a",
+          "platform": "ios",
+          "runtimeVersion": "166ee8786683217e3c8d06b3e8b322e68f80e17d"
+        }
+      ]
+    },
     {
       "id": "3e06c3bf-d848-4d3e-950f-7716c3235e9c",
       "name": "[example] iPhone-only native preview",
@@ -61,27 +82,6 @@
         {
           "id": "01a085fc-0bad-7dce-809c-282e18f00986",
           "groupId": "37165c0a-2865-47d2-ac4c-403ba1b18821",
-          "platform": "ios",
-          "runtimeVersion": "bd60359c5e450058d8f98dbde40e5beefb68fe2e"
-        }
-      ]
-    },
-    {
-      "id": "02aff440-d060-4a7a-b55b-530f9c2a5692",
-      "name": "[example] Reading list",
-      "channel": "draft-pr-2",
-      "branch": "draft-pr-2",
-      "message": "[example] Reading list",
-      "createdAt": "2026-09-09T11:44:41.387Z",
-      "gitCommitHash": "de7c50c70e0c2c95af001ed4fc38129e7a9afc14",
-      "pullRequest": {
-        "number": 2,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/2"
-      },
-      "updates": [
-        {
-          "id": "01a085fc-05ab-7d36-95e2-e8ef19dd5776",
-          "groupId": "02aff440-d060-4a7a-b55b-530f9c2a5692",
           "platform": "ios",
           "runtimeVersion": "bd60359c5e450058d8f98dbde40e5beefb68fe2e"
         }
