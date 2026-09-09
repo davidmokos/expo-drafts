@@ -6,6 +6,27 @@ const { withExpoDrafts } = require('../app.plugin.js');
 const id = 'e8ecb8b1-95ac-4f76-965a-df4b39ea3929';
 const options = { projectId: id, catalogUrl: 'https://example.com/catalog.json' };
 
+test('direct EAS discovery configures a project-specific login callback without a catalog endpoint', async () => {
+  const result = withExpoDrafts({ name: 'test', slug: 'test' }, { projectId: id });
+  assert.equal(result.updates.url, `https://u.expo.dev/${id}`);
+  assert.deepEqual(result.runtimeVersion, { policy: 'fingerprint' });
+  assert.equal(result.updates.requestHeaders['expo-channel-name'], 'drafts');
+  const initialTypes = [{ CFBundleURLSchemes: ['existing-app'] }];
+  const configured = await result.mods.ios.infoPlist({
+    ...result,
+    modResults: { CFBundleURLTypes: initialTypes },
+    modRequest: { platform: 'ios', modName: 'infoPlist' },
+  });
+  const plist = configured.modResults;
+  assert.equal(plist.ExpoDraftsCatalogURL, '');
+  assert.equal(plist.ExpoDraftsBuildsCatalogURL, '');
+  assert.equal(plist.ExpoDraftsAuthScheme, `expo-drafts.${id}`);
+  assert.deepEqual(plist.CFBundleURLTypes[0], initialTypes[0]);
+  assert.deepEqual(plist.CFBundleURLTypes[1].CFBundleURLSchemes, [`expo-drafts.${id}`]);
+  const repeated = await result.mods.ios.infoPlist({ ...configured });
+  assert.equal(repeated.modResults.CFBundleURLTypes.length, 2);
+});
+
 test('configures manual channel selection with fingerprint compatibility and recovery intact', () => {
   const result = withExpoDrafts(
     { name: 'test', slug: 'test', updates: { requestHeaders: { 'x-custom': 'retained' } } },

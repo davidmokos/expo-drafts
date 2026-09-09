@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: Preview channel from the current catalog
+        description: EAS channel for the published preview
         required: true
       update_id:
         description: Exact iOS update ID
@@ -16,7 +16,7 @@ on:
         required: true
 
 permissions:
-  contents: write
+  contents: read
   issues: read
 
 jobs:
@@ -34,6 +34,7 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
           path: control
+          persist-credentials: false
       - uses: actions/setup-node@v6
         with:
           node-version: 24
@@ -41,12 +42,10 @@ jobs:
         id: request
         env:
           GH_TOKEN: ${{ github.token }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: |
           mkdir -p work
           node control/cli/build-request.mjs --project-id "$DRAFT_PROJECT_ID" --output work/request.json
-      - name: Publish queued state
-        id: queued
-        run: node control/cli/eas-native-build.mjs state --request work/request.json --repository control --state queued
       - name: Check out verified preview source
         uses: actions/checkout@v5
         with:
@@ -77,11 +76,8 @@ jobs:
       - name: Dispatch EAS native build workflow
         working-directory: source/example
         run: node ../../control/cli/dispatch-native-build.mjs ../../work/request.json ../../work/eas-native-workflow.json
-      - name: Publish building state and await verified artifact
-        run: node control/cli/eas-native-build.mjs wait --request work/request.json --run-file work/eas-native-workflow.json --repository control --project-directory source/example --output work/ready-build.json
-      - name: Record failed request
-        if: ${{ (failure() || cancelled()) && steps.queued.outcome == 'success' }}
-        run: node control/cli/eas-native-build.mjs state --request work/request.json --repository control --state failed
+      - name: Await and verify the EAS artifact
+        run: node control/cli/eas-native-build.mjs wait --request work/request.json --run-file work/eas-native-workflow.json --no-publish --project-directory source/example --output work/ready-build.json
       - uses: actions/upload-artifact@v4
         if: ${{ always() && steps.request.outcome == 'success' }}
         with:

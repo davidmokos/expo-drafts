@@ -72,7 +72,7 @@ jobs:
         working-directory: source/example
       - uses: expo/expo-github-action@v8
         with:
-          eas-version: latest
+          eas-version: 23.2.0
           token: ${{ secrets.EXPO_TOKEN }}
       - name: Dispatch the EAS workflow
         working-directory: source/example
@@ -95,7 +95,7 @@ jobs:
         run: |
           node control/cli/eas-workflow.mjs cancel --run-file work/eas-workflow.json \
             --project-id "$DRAFT_PROJECT_ID" --channel "$DRAFT_CHANNEL" --git-commit "$DRAFT_HEAD_SHA"
-      - name: Create draft catalog entry
+      - name: Save verified publication report
         shell: bash
         env:
           DRAFT_BUILD_URL: ${{ vars.DRAFT_BUILD_URL }}
@@ -115,27 +115,3 @@ jobs:
             work/draft.json
             work/eas-workflow.json
           if-no-files-found: error
-
-  catalog:
-    needs: update
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      # The writer runs from the default branch without PR dependencies.
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-      - uses: actions/download-artifact@v4
-        with:
-          name: draft-catalog-entry
-          path: incoming-draft
-      - name: Merge and publish catalog
-        run: node cli/publish-catalog.mjs --input incoming-draft/draft.json
-      - name: Show catalog URL
-        env:
-          REPOSITORY: ${{ github.repository }}
-        run: echo "Catalog https://api.github.com/repos/$REPOSITORY/contents/catalog.json?ref=drafts-catalog" >> "$GITHUB_STEP_SUMMARY"

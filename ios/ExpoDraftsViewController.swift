@@ -10,6 +10,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   private var openingBundledVersion = false
   private var preparingBuildID: String?
   private var installation: DraftInstallationRequest?
+  private var signingIn = false
 
   private enum Section { case installation, current, drafts, builds }
   private var sections: [Section] {
@@ -18,7 +19,8 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   private var buildRefreshTimer: Timer?
   private var foregroundObserver: NSObjectProtocol?
   private var pickerVisible = false
-  private var busy: Bool { loadingDraftID != nil || preparingBuildID != nil || openingBundledVersion }
+  private var busy: Bool { loadingDraftID != nil || preparingBuildID != nil || openingBundledVersion || signingIn }
+  private var needsSignIn: Bool { manager.usesEASDiscovery && !manager.isSignedIn }
 
   private var filteredDrafts: [DraftEntry] {
     guard let query = search.searchBar.text?.trimmingCharacters(in: .whitespacesAndNewlines), !query.isEmpty else { return drafts }
@@ -31,6 +33,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
 
   init(manager: ExpoDraftsManager) {
     self.manager = manager
+    drafts = manager.cachedCatalog?.drafts.sorted { $0.createdAt > $1.createdAt } ?? []
     super.init(style: .insetGrouped)
   }
 
@@ -87,6 +90,15 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
 
   @objc private func refreshCatalog() {
     guard !busy else { return }
+    if needsSignIn {
+      loading = false
+      errorMessage = nil
+      drafts = []
+      refreshControl?.endRefreshing()
+      reloadTable()
+      updateBuildPolling()
+      return
+    }
     loading = true
     errorMessage = nil
     reloadTable()
@@ -99,6 +111,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       case .success(let catalog):
         self.drafts = catalog.drafts.sorted { $0.createdAt > $1.createdAt }
       case .failure(let error):
+        if self.manager.usesEASDiscovery && self.manager.cachedCatalog == nil { self.drafts = [] }
         self.errorMessage = error.localizedDescription
         if !self.drafts.isEmpty && !self.busy && self.pickerVisible && self.presentedViewController == nil {
           let alert = UIAlertController(title: "Couldn't Refresh Drafts", message: error.localizedDescription, preferredStyle: .alert)
@@ -113,9 +126,15 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   }
 
   private func refreshBuildMetadata() {
-    guard !busy else { return }
+    guard !busy, !needsSignIn else { return }
     manager.fetchBuildCatalog { [weak self] in
       guard let self else { return }
+      if self.needsSignIn || self.manager.discoveryAccessError != nil {
+        self.loading = false
+        self.drafts = []
+        self.errorMessage = self.manager.discoveryAccessError
+        self.refreshControl?.endRefreshing()
+      }
       self.reloadTable()
       self.updateBuildPolling()
     }
@@ -124,6 +143,17 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
 
   private func reloadTable() {
     installation = manager.pendingInstallation
+    if manager.usesEASDiscovery && manager.isSignedIn {
+      if navigationItem.leftBarButtonItem == nil {
+        let account = UIBarButtonItem(image: UIImage(systemName: "person.crop.circle"), style: .plain, target: self, action: #selector(presentAccount))
+        account.accessibilityLabel = "Expo account"
+        account.accessibilityIdentifier = "expo-drafts-account"
+        navigationItem.leftBarButtonItem = account
+      }
+      navigationItem.leftBarButtonItem?.isEnabled = !busy
+    } else {
+      navigationItem.leftBarButtonItem = nil
+    }
     tableView.reloadData()
   }
 
@@ -184,9 +214,9 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   }
 
   override func tableView(_ tableView: UITableView, titleForFooterInSection section: Int) -> String? {
-    guard sections[section] == .drafts, manager.buildsCatalogError != nil,
+    guard sections[section] == .drafts, let error = manager.buildsCatalogError,
       filteredDrafts.contains(where: { manager.compatibility($0) != nil }) else { return nil }
-    return "Build status could not be refreshed. Compatible drafts can still be opened."
+    return error + " Compatible drafts can still be opened."
   }
 
   override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -243,9 +273,22 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
         content.image = UIImage(systemName: "arrow.up.right")
         cell.accessibilityIdentifier = "expo-drafts-builds"
       case .drafts:
+        if needsSignIn {
+          content.text = signingIn ? "Signing in…" : "Sign in to Expo"
+          content.secondaryText = "Browse this project's EAS Updates and builds."
+          content.textProperties.color = !busy ? .tintColor : .secondaryLabel
+          content.image = UIImage(systemName: "person.crop.circle")
+          cell.accessibilityIdentifier = "expo-drafts-sign-in"
+          if signingIn {
+            let spinner = UIActivityIndicatorView(style: .medium)
+            spinner.startAnimating()
+            cell.accessoryView = spinner
+          }
+          break
+        }
         content.text = loading && drafts.isEmpty ? "Loading drafts…" :
           (errorMessage != nil && drafts.isEmpty ? "Couldn't Load Drafts" : (drafts.isEmpty ? "No Drafts" : "No Results"))
-        content.secondaryText = errorMessage ?? (drafts.isEmpty ? "Pull to refresh the catalog." : "Try a different search.")
+        content.secondaryText = errorMessage ?? (drafts.isEmpty ? "Pull to refresh." : "Try a different search.")
         cell.accessibilityIdentifier = "expo-drafts-catalog-status"
         cell.selectionStyle = .none
         cell.accessibilityTraits = [.staticText]
@@ -310,6 +353,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       manager.openBuild()
       return
     case .drafts:
+      if needsSignIn { signIn(); return }
       guard !filteredDrafts.isEmpty else { return }
     }
     let draft = filteredDrafts[indexPath.row]
@@ -343,6 +387,38 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     search.searchBar.isUserInteractionEnabled = !busy
     refreshControl?.isEnabled = !busy
     reloadTable()
+  }
+
+  private func signIn() {
+    search.isActive = false
+    signingIn = true
+    updateOperationControls()
+    manager.signIn(presenting: self) { [weak self] result in
+      guard let self else { return }
+      self.signingIn = false
+      self.updateOperationControls()
+      switch result {
+      case .success: self.refreshCatalog()
+      case .failure(let error):
+        if case DraftsExpoSessionError.cancelled = error { return }
+        let alert = UIAlertController(title: "Couldn't Sign In", message: error.localizedDescription, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "OK", style: .cancel))
+        self.present(alert, animated: true)
+      }
+    }
+  }
+
+  @objc private func presentAccount() {
+    guard !busy else { return }
+    let alert = UIAlertController(title: "Expo account", message: "Updates and builds are loaded directly from EAS using your Expo account.", preferredStyle: .actionSheet)
+    alert.addAction(UIAlertAction(title: "Sign Out", style: .destructive) { [weak self] _ in
+      guard let self else { return }
+      self.manager.signOut()
+      self.refreshCatalog()
+    })
+    alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+    alert.popoverPresentationController?.barButtonItem = navigationItem.leftBarButtonItem
+    present(alert, animated: true)
   }
 
   private func runBundledVersion() {
