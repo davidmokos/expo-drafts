@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T15:24:41.249Z",
+  "generatedAt": "2026-09-09T15:24:57.258Z",
   "drafts": [
+    {
+      "id": "7276fb01-6c16-455e-a15d-24f8970ad578",
+      "name": "[example] previews a pull request from GitHub Actions",
+      "channel": "draft-pr-1",
+      "branch": "draft-pr-1",
+      "message": "[example] previews a pull request from GitHub Actions",
+      "createdAt": "2026-09-09T15:24:32.602Z",
+      "gitCommitHash": "9d20a9a267ed872a0bfcd9cb6bd7b7028c6aab8b",
+      "pullRequest": {
+        "number": 1,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/1"
+      },
+      "updates": [
+        {
+          "id": "01a086c5-4dda-7290-b095-7f19783b7d9a",
+          "groupId": "7276fb01-6c16-455e-a15d-24f8970ad578",
+          "platform": "ios",
+          "runtimeVersion": "dd91e77e18e222b089faec779acba7efc0c25182"
+        }
+      ]
+    },
     {
       "id": "652c1de4-e3cf-493d-a757-84243fcc04e4",
       "name": "[example] iPhone-only native preview",
@@ -84,27 +105,6 @@
           "groupId": "0bd0c7b7-0d77-4679-b803-2dec86055ca9",
           "platform": "ios",
           "runtimeVersion": "dd91e77e18e222b089faec779acba7efc0c25182"
-        }
-      ]
-    },
-    {
-      "id": "a11520d3-3bfd-493e-aa35-7725123f2b6d",
-      "name": "[example] previews a pull request from GitHub Actions",
-      "channel": "draft-pr-1",
-      "branch": "draft-pr-1",
-      "message": "[example] previews a pull request from GitHub Actions",
-      "createdAt": "2026-09-09T14:10:39.611Z",
-      "gitCommitHash": "733e00fc51861079b2357abb8bbb15533ca47cc0",
-      "pullRequest": {
-        "number": 1,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/1"
-      },
-      "updates": [
-        {
-          "id": "01a08681-a97b-7972-9b98-35749a9a58dd",
-          "groupId": "a11520d3-3bfd-493e-aa35-7725123f2b6d",
-          "platform": "ios",
-          "runtimeVersion": "0b52dae850fb723b136dfed86d4051693ab14617"
         }
       ]
     },
