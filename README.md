@@ -121,7 +121,7 @@ Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to 
 
 `example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker uses this repository's catalog. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
 
-Direct installation uses native runtime `166ee8786683217e3c8d06b3e8b322e68f80e17d`. PRs #1 through #4 have been republished through EAS Workflows for that runtime. PR #5 changes `ios.supportsTablet` to `false` and uses runtime `b585b87f336c7d3a807921c6c6e80795b9fdd2e0`, providing a real native upgrade to try from the picker. The original manual Amber, Ocean, and Camera entries remain in the catalog with earlier runtimes. See the [validation record](docs/ios-validation.md#direct-installation-from-the-app) for exact update IDs and completed checks.
+The current picker and installation status use native runtime `0b52dae850fb723b136dfed86d4051693ab14617`. PRs #1 through #4 have been republished through EAS Workflows for that runtime. PR #5 changes `ios.supportsTablet` to `false` and uses runtime `0d6f42d8d4867b6511c7631dfebef1a6c20ebf4f`, providing a real native upgrade to try from the picker. The original manual Amber, Ocean, and Camera entries remain in the catalog with earlier runtimes. See the [validation record](docs/ios-validation.md#running-bundle-and-installation-request-recovery) for exact update IDs and completed checks.
 
 ```sh
 npm ci
