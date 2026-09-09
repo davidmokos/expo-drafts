@@ -1,10 +1,49 @@
 # iOS validation, September 8 and 9, 2026
 
-This record covers direct EAS discovery and preserves validation results for earlier runtime revisions. Local simulator validation uses an iPhone 17 Pro Max running iOS 26.3. Native apps are compiled in Release mode with Xcode, and EAS hosts the remote updates.
+This record covers the native example app and its PR previews, and preserves validation results for earlier runtime revisions. Local simulator validation uses an iPhone 17 Pro Max running iOS 26.3. Native apps are compiled in Release mode with Xcode, and EAS hosts the remote updates.
 
 The app uses Expo SDK 57, React Native 0.86.3, and expo-updates 57.0.21. Its EAS project is [@mokosdavid/expo-drafts-lab](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab), and its bundle identifier is `dev.davidmokos.draftslab`.
 
-## Direct EAS discovery
+## Native example app and PR previews
+
+Commit [`67f4767`](https://github.com/davidmokos/expo-drafts/commit/67f47679aeeb604309960667d8643e10ee01444f) replaces the example's single-screen demos with four native tabs: Library, Focus, Studio, and Settings. Expo Router supplies the tab bar and navigation headers. `@expo/ui` supplies the forms and controls, including the iOS color picker. Every preview keeps all four screens; `example/src/data/preview.ts` selects its initial tab, content, colors, and timer defaults.
+
+The package build, lint, all 42 Node tests, native suites, example typecheck, and managed iOS runtime check passed in [main CI](https://github.com/davidmokos/expo-drafts/actions/runs/34384283237). The shared runtime for PRs #1 through #4 is `672192333636b1034ed4a1ed4388ee8b0d12d87c`. PR #5 preserves `ios.supportsTablet: false` and uses `b2f0eb732231e1534c0d4e1e3dccc8b3da61ee9b`.
+
+### Release simulator checks
+
+The local Release app compiled and opened all four native tabs. Library checks covered changing a favorite, marking a book finished, and applying the shared library filters from Settings. The Focus timer started at `25:00`, continued across tab changes, and paused at `23:49`. Studio checks covered choosing green with the native color picker, changing lightness, and resetting the color. Tab changes retained screen state.
+
+The native draft picker launched live EAS updates in this order: Color Studio, Focus Timer, then Reading List. Each opened its configured initial tab with the expected preview content. Settings > Build details showed Reading List's actual update UUID `01a08747-8a57-7765-bdc9-df47563b4fcd` and source `EAS Update`. **Run bundled version** returned to the simulator's exact embedded UUID `46d7ac54-7b04-4061-a585-9d6b3e0083e3`; that selection persisted after a cold restart. The fourth compatible PR then opened PR Library with its purple accent. Settings' Browse drafts action opened the same native picker. The iPhone-only row changed from **Build in progress** to **Install compatible build** when EAS finished, and its action explained that device builds cannot be installed in the simulator. Sign Out removed the temporary simulator session and draft rows after validation.
+
+These checks reused the local QA-only Keychain session fixture and cached native build artifacts described in the EAS discovery record below. They do not establish completion of a real Expo browser sign-in callback. Light appearance was visually verified. Dark appearance remains unverified: after requesting dark mode in the simulator, the app's scene and window still reported inherited light traits, with no window or root-controller appearance override.
+
+### Verified publications
+
+All five PR publication workflows and package checks passed at the source commits below. Authenticated EAS reads matched each report's latest channel publication, exact iOS update ID, source commit, runtime, and successful EAS workflow. The app reads these previews directly from EAS.
+
+| Preview | Channel | Source | iOS update ID | Successful CI |
+| --- | --- | --- | --- | --- |
+| [PR #1](https://github.com/davidmokos/expo-drafts/pull/1) | `draft-pr-1` | [`1d07f4e`](https://github.com/davidmokos/expo-drafts/commit/1d07f4e50df0507b8104c102c6b528bbba51cfb3) | `01a08745-aae5-7658-9b01-f5a8a94e06c9` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08744-2727-7389-99eb-8bc9deb15d9b) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34384510511) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34384510505) |
+| [PR #2](https://github.com/davidmokos/expo-drafts/pull/2) | `draft-pr-2` | [`53d6a8d`](https://github.com/davidmokos/expo-drafts/commit/53d6a8d92271a7194bd5a706f33bad51c8e9b5c3) | `01a08747-8a57-7765-bdc9-df47563b4fcd` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08746-1531-7bab-9e97-56b8b8a57b81) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34384707781) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34384707835) |
+| [PR #3](https://github.com/davidmokos/expo-drafts/pull/3) | `draft-pr-3` | [`aa883b5`](https://github.com/davidmokos/expo-drafts/commit/aa883b54858d2f3f3428bab181fdd4aa8c9706b5) | `01a08745-839f-7569-9f4a-2b03f221fcf4` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08744-1b86-7bb0-b4ec-ce67d5be9064) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34384505642) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34384505630) |
+| [PR #4](https://github.com/davidmokos/expo-drafts/pull/4) | `draft-pr-4` | [`d86dcab`](https://github.com/davidmokos/expo-drafts/commit/d86dcabe9eb76d03ebdc93034ce103b66421d937) | `01a08745-8ab8-7534-8e87-395ba8ddd362` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08744-33a0-772f-b0a9-3177d58f8acd) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34384499874) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34384499835) |
+| [PR #5](https://github.com/davidmokos/expo-drafts/pull/5) | `draft-pr-5` | [`fc74d5e`](https://github.com/davidmokos/expo-drafts/commit/fc74d5efa089d16f81db652996568a5b545c5a21) | `01a08745-9688-71fa-8194-6862d495031e` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08744-4a67-71a2-9502-42361110f86a) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34384514440) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34384514405) |
+
+### Device builds
+
+Both EAS builds and their GitHub workflows succeeded on the first attempt. They reused the existing valid ad hoc profile with `refresh_ad_hoc_provisioning_profile: false`.
+
+| Native build | Source | Embedded update | Successful CI |
+| --- | --- | --- | --- |
+| [Shared, PRs #1–4](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/3a00bbb5-ca54-4bcc-a6c9-798732803aa2) | [`53d6a8d`](https://github.com/davidmokos/expo-drafts/commit/53d6a8d92271a7194bd5a706f33bad51c8e9b5c3) | `f49fe983-f286-413d-871e-8639cce0aedd` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08749-ca99-781a-8cf1-91d18ae1844d) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34385106867) |
+| [PR #5, iPhone only](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/33285ce2-5306-4b4a-963d-81e1f3a1d8ff) | [`fc74d5e`](https://github.com/davidmokos/expo-drafts/commit/fc74d5efa089d16f81db652996568a5b545c5a21) | `8cf20813-0540-4841-9875-cabbc7a9b15d` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08747-fb95-742c-9bee-7dfc73138552) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34384923093) |
+
+Downloaded archives passed strict signature checks, exact source and embedded runtime checks, registered phone provisioning, project/callback configuration, and complete framework dependency checks. Each contains nine Mach-O images and 29 resolved archive dependencies. The shared build targets iPhone and iPad; PR #5 targets iPhone only. Both use version `1.0.0`, build `1`, and direct EAS discovery. The shared build embeds Reading List as its bundled fallback.
+
+A local installation of the verified shared build was attempted at 17:57 UTC. The phone became reachable over a wired CoreDevice tunnel with Developer Mode enabled, but iOS rejected the install with `IXRemoteErrorDomain` code `9`: “Installation on this device is prohibited by ManagedConfiguration.” The new build was not installed. The source of the phone restriction is not yet confirmed; the user was asked to check its app-installation settings. Physical launch, browser sign-in, and switching on this new phone build remain pending.
+
+## Earlier direct EAS discovery
 
 Commit [`1e4c6f8`](https://github.com/davidmokos/expo-drafts/commit/1e4c6f87664948b58d959659aeda845b15d61a6e) replaces the example app's GitHub catalog with authenticated EAS discovery. The native picker reads channel names, latest iOS publications, exact update IDs, source commits, and runtimes from EAS GraphQL. Device builds come from the same authenticated API. GitHub remains the optional build-request dispatcher and PR publication trigger.
 

@@ -3,6 +3,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 test_dir="$(mktemp -d "${TMPDIR:-/tmp}/expo-drafts-native-tests.XXXXXX")"
 trap 'rm -rf "$test_dir"' EXIT
+swiftc ios/ExpoDraftsCatalog.swift tests/ios/catalog-tests.swift -o "$test_dir/catalog-tests"
+"$test_dir/catalog-tests"
 policy_dir="node_modules/expo-updates/ios/EXUpdates/SelectionPolicy"
 swiftc -emit-module -emit-library -module-name EXUpdates tests/ios/EXUpdatesTestDouble.swift \
   "$policy_dir/SelectionPolicies.swift" "$policy_dir/LauncherSelectionPolicy.swift" \

@@ -132,6 +132,23 @@ struct EASClientTests {
       print("PASS EAS channels map exact latest iOS updates, names, incompatible runtimes, and empty branches")
     }
     do {
+      let offset = try channel(1) { _, _, update in update["createdAt"] = "2026-09-09T14:00:00+02:00" }
+      let fractional = try channel(2) { _, _, update in update["createdAt"] = "2026-09-09T12:00:00.001Z" }
+      let newest = try channel(3) { _, _, update in update["createdAt"] = "2026-09-09T07:00:01-05:00" }
+      let equivalent = try channel(4) { _, _, update in update["createdAt"] = "2026-09-09T12:00:00.000Z" }
+      let pages = [try page(channels: [equivalent, offset]), try page(channels: [newest, fractional])]
+      let catalog = try DraftEASMapping.catalog(from: pages, projectID: projectID)
+      try expect(catalog.drafts.map(\.channel) == ["channel-3", "channel-2", "channel-1", "channel-4"],
+        "EAS channel pages must use actual publication dates and deterministic equal-instant ties")
+      try expect(DraftEntry.newestFirst(catalog.drafts).map(\.id) == catalog.drafts.map(\.id),
+        "Sorting a freshly mapped or cached EAS catalog must preserve its exact publication order")
+      let malformed = try channel { _, _, update in update["createdAt"] = "not-a-date" }
+      try failure("EAS dates remain validated before returning the catalog") {
+        _ = try DraftEASMapping.catalog(from: [page(channels: [malformed])], projectID: projectID)
+      }
+      print("PASS EAS publications sort newest first across pages using parsed dates and stable ties")
+    }
+    do {
       for kind in ["paused", "mapping", "branch", "partial-rollout", "control", "rollback", "platform", "uuid", "runtime"] {
         let bad = try channel { channel, branch, update in
           switch kind {
@@ -270,6 +287,6 @@ struct EASClientTests {
       EASProtocol.responseHeaders.removeValue(forKey: "Retry-After")
       print("PASS server Retry-After backoff is shared across refreshes without extra network calls")
     }
-    print("8 iOS EAS discovery test groups passed")
+    print("9 iOS EAS discovery test groups passed")
   }
 }
