@@ -124,7 +124,7 @@ export async function waitForWorkflow(
   }
 }
 
-function createApi(token) {
+export function createApi(token) {
   if (!token) throw new Error('EXPO_TOKEN is required to read or cancel this EAS workflow.');
   const request = async (query, runId) => {
     const response = await fetch('https://api.expo.dev/graphql', {

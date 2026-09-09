@@ -17,7 +17,8 @@ on:
         type: boolean
         default: true
 
-# Requests for one native runtime share a build. Keep an in-progress build alive.
+# GitHub serializes native requests by verified runtime before this lookup.
+# EAS custom concurrency groups are not enforced; keep any EAS build alive.
 concurrency:
   group: draft-native-${{ inputs.runtime_version }}
   cancel_in_progress: false

@@ -10,6 +10,8 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   private var openingBundledVersion = false
   private var preparingBuildID: String?
   private var installation: DraftInstallationRequest?
+  private var installationResume: DraftInstallationResume?
+  private var installationObserver: NSObjectProtocol?
   private var signingIn = false
 
   private enum Section { case installation, current, drafts, builds }
@@ -19,7 +21,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   private var buildRefreshTimer: Timer?
   private var foregroundObserver: NSObjectProtocol?
   private var pickerVisible = false
-  private var busy: Bool { loadingDraftID != nil || preparingBuildID != nil || openingBundledVersion || signingIn }
+  private var busy: Bool { loadingDraftID != nil || preparingBuildID != nil || openingBundledVersion || signingIn || manager.resumingInstallation }
   private var needsSignIn: Bool { manager.usesEASDiscovery && !manager.isSignedIn }
 
   private var filteredDrafts: [DraftEntry] {
@@ -43,6 +45,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   deinit {
     buildRefreshTimer?.invalidate()
     if let foregroundObserver { NotificationCenter.default.removeObserver(foregroundObserver) }
+    if let installationObserver { NotificationCenter.default.removeObserver(installationObserver) }
   }
 
   override func viewDidLoad() {
@@ -72,6 +75,19 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       guard let self, self.pickerVisible else { return }
       self.refreshBuildMetadata()
     }
+    installationObserver = NotificationCenter.default.addObserver(
+      forName: ExpoDraftsManager.installationDidChange, object: manager, queue: .main
+    ) { [weak self] _ in
+      guard let self else { return }
+      if let catalog = self.manager.cachedCatalog {
+        self.drafts = DraftEntry.newestFirst(catalog.drafts)
+      } else if self.manager.usesEASDiscovery {
+        self.drafts = []
+      }
+      if !self.manager.resumingInstallation { self.loading = false }
+      self.updateOperationControls()
+    }
+    updateOperationControls()
     refreshCatalog()
   }
 
@@ -142,7 +158,8 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
   }
 
   private func reloadTable() {
-    installation = manager.pendingInstallation
+    installationResume = manager.pendingDraftResume
+    installation = installationResume?.request ?? manager.pendingInstallation
     if manager.usesEASDiscovery && manager.isSignedIn {
       if navigationItem.leftBarButtonItem == nil {
         let account = UIBarButtonItem(image: UIImage(systemName: "person.crop.circle"), style: .plain, target: self, action: #selector(presentAccount))
@@ -206,7 +223,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
 
   override func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
     switch sections[section] {
-    case .installation: return "Installation requested"
+    case .installation: return installationResume?.isTargetRuntime == true ? "Continue draft" : "Installation requested"
     case .current: return "Running"
     case .drafts: return "Drafts"
     case .builds: return nil
@@ -236,13 +253,24 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       switch section {
       case .installation:
         content.text = installation?.name
-        content.secondaryText = "After tapping Install, go to the Home Screen. Reopen when installation finishes."
-        let spinner = UIActivityIndicatorView(style: .medium)
-        spinner.startAnimating()
-        cell.accessoryView = spinner
+        if installationResume?.isTargetRuntime == true {
+          content.secondaryText = manager.resumingInstallation ? "Opening selected draft…" :
+            (needsSignIn ? "Sign in to Expo to open the selected draft." :
+              (manager.installationResumeError ?? "Tap to open the selected draft or cancel."))
+          cell.accessibilityValue = manager.resumingInstallation ? "Opening selected draft" : "Draft ready to resume"
+        } else {
+          content.secondaryText = installationResume == nil ?
+            "After tapping Install, go to the Home Screen. Reopen when installation finishes." :
+            "Confirm Install, then reopen the app. Your selected draft will open automatically."
+          cell.accessibilityValue = "Installation requested"
+        }
+        if manager.resumingInstallation || manager.pendingInstallation != nil {
+          let spinner = UIActivityIndicatorView(style: .medium)
+          spinner.startAnimating()
+          cell.accessoryView = spinner
+        } else { cell.accessoryType = .disclosureIndicator }
         cell.accessibilityIdentifier = "expo-drafts-installation-requested"
-        cell.accessibilityValue = "Installation requested"
-        cell.accessibilityHint = "Shows retry and hide status options. iOS handles installation."
+        cell.accessibilityHint = "Shows retry and cancel options."
       case .current:
         if indexPath.row == 1 {
           content.text = openingBundledVersion ? "Opening bundled version…" : "Run bundled version"
@@ -401,7 +429,10 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       self.signingIn = false
       self.updateOperationControls()
       switch result {
-      case .success: self.refreshCatalog()
+      case .success:
+        if self.manager.pendingDraftResume?.isTargetRuntime == true {
+          self.manager.resumeInstalledDraft(explicitRetry: true)
+        } else { self.refreshCatalog() }
       case .failure(let error):
         if case DraftsExpoSessionError.cancelled = error { return }
         let alert = UIAlertController(title: "Couldn't Sign In", message: error.localizedDescription, preferredStyle: .alert)
@@ -460,17 +491,37 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
 
   private func presentInstallationStatus(at indexPath: IndexPath) {
     guard let request = installation else { return }
+    let readyToResume = installationResume?.isTargetRuntime == true
+    let message: String
+    if readyToResume {
+      message = manager.installationResumeError ?? "The matching build is installed. Open the publication you selected before installation."
+    } else if installationResume != nil {
+      message = "After confirming Install, go to the Home Screen and wait for the app icon to finish installing. Reopen the app to open your selected draft automatically. Cancel Auto-Open if you canceled installation or changed your mind."
+    } else {
+      message = "After confirming Install, go to the Home Screen and wait for the app icon to finish installing. Reopen the app and select your draft. Hide Status if you canceled installation."
+    }
     let sheet = UIAlertController(
-      title: "Installation requested",
-      message: "After confirming Install, go to the Home Screen and wait for the app icon to finish installing. Then reopen the app. If you canceled the iOS prompt, you can try again or hide this status.",
+      title: readyToResume ? "Continue draft" : "Installation requested",
+      message: message,
       preferredStyle: .actionSheet
     )
-    if let draft = drafts.first(where: { $0.id.lowercased() == request.draftID.lowercased() && $0.iosUpdate?.runtimeVersion == request.targetRuntime }) {
+    if readyToResume {
+      sheet.addAction(UIAlertAction(title: needsSignIn ? "Sign in to Expo" : "Open Selected Draft", style: .default) { [weak self, weak sheet] _ in
+        sheet?.dismiss(animated: true) {
+          guard let self else { return }
+          if self.needsSignIn { self.signIn() }
+          else { self.manager.resumeInstalledDraft(explicitRetry: true) }
+        }
+      })
+    } else if let draft = drafts.first(where: {
+      $0.id.lowercased() == request.draftID.lowercased() && $0.iosUpdate?.runtimeVersion == request.targetRuntime &&
+      (request.updateID == nil || $0.iosUpdate?.id.lowercased() == request.updateID?.lowercased())
+    }) {
       sheet.addAction(UIAlertAction(title: "Try Installation Again", style: .default) { [weak self, weak sheet] _ in
         sheet?.dismiss(animated: true) { self?.installBuild(for: draft) }
       })
     }
-    sheet.addAction(UIAlertAction(title: "Hide Status", style: .default) { [weak self] _ in
+    sheet.addAction(UIAlertAction(title: installationResume == nil ? "Hide Status" : "Cancel Auto-Open", style: .default) { [weak self] _ in
       guard let self else { return }
       self.manager.dismissInstallationStatus()
       self.reloadTable()
@@ -493,7 +544,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
       #if targetEnvironment(simulator)
       message = "A compatible device build is ready. Install it from Drafts on a registered iPhone or iPad. Device builds cannot be installed in the simulator."
       #else
-      message = "Confirm Install, then go to the Home Screen so iOS can replace this app. Wait for the app icon to finish installing, then reopen it and select this update."
+      message = "Confirm Install, then go to the Home Screen so iOS can replace this app. Wait for the app icon to finish installing, then reopen it. This draft will open automatically."
       #endif
     } else if build?.isInProgress == true {
       let progress = build?.state == "queued" ? "A compatible iOS device build is queued." : "A compatible iOS device build is in progress."
