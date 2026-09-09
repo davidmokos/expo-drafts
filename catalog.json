@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T15:30:23.471Z",
+  "generatedAt": "2026-09-09T15:30:27.711Z",
   "drafts": [
     {
       "id": "bb91d438-412f-4a28-a106-cbd9c4a2f9de",
@@ -21,6 +21,27 @@
           "groupId": "bb91d438-412f-4a28-a106-cbd9c4a2f9de",
           "platform": "ios",
           "runtimeVersion": "8bc256182be4455e53cb429fb3771559e0ee5a7c"
+        }
+      ]
+    },
+    {
+      "id": "b2ceaa3d-7026-44ae-9374-0005976073a6",
+      "name": "[example] iPhone-only native preview",
+      "channel": "draft-pr-5",
+      "branch": "draft-pr-5",
+      "message": "[example] iPhone-only native preview",
+      "createdAt": "2026-09-09T15:29:59.997Z",
+      "gitCommitHash": "2e16f36b068435fdb92e8e4fb4145532d60404b4",
+      "pullRequest": {
+        "number": 5,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/5"
+      },
+      "updates": [
+        {
+          "id": "01a086ca-4cbd-762f-af74-4887556d590f",
+          "groupId": "b2ceaa3d-7026-44ae-9374-0005976073a6",
+          "platform": "ios",
+          "runtimeVersion": "dc86b332558e23da1051e6bed8d39016ef2f9e60"
         }
       ]
     },
@@ -63,27 +84,6 @@
           "groupId": "c8baf2b3-2e4e-4d89-89bf-2baa0c99c231",
           "platform": "ios",
           "runtimeVersion": "8bc256182be4455e53cb429fb3771559e0ee5a7c"
-        }
-      ]
-    },
-    {
-      "id": "652c1de4-e3cf-493d-a757-84243fcc04e4",
-      "name": "[example] iPhone-only native preview",
-      "channel": "draft-pr-5",
-      "branch": "draft-pr-5",
-      "message": "[example] iPhone-only native preview",
-      "createdAt": "2026-09-09T15:24:20.027Z",
-      "gitCommitHash": "b200d27c36c988b28394550e9869526778024a29",
-      "pullRequest": {
-        "number": 5,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/5"
-      },
-      "updates": [
-        {
-          "id": "01a086c5-1cbb-72e7-b911-807d57a4ff77",
-          "groupId": "652c1de4-e3cf-493d-a757-84243fcc04e4",
-          "platform": "ios",
-          "runtimeVersion": "ae6071d520c876f2945fa84d68722552f0544070"
         }
       ]
     },
