@@ -10,7 +10,7 @@ Each PR publishes to an EAS channel such as `draft-pr-42`. Sign in to Expo in th
 
 The picker uses standard UIKit inset grouped rows, search, a Done button, and pull to refresh. It follows the system's light or dark appearance. Its draggable floating button uses the system glass style on iOS 26 and later, with a tinted button on earlier versions.
 
-Only the latest iOS publication on each channel is listed. Publishing again updates that entry. For separate named experiments, use distinct channels such as `draft-search-redesign` or `draft-checkout-agent-a`.
+Only the latest iOS publication on each channel is listed, newest first. Each row shows its publication date and time in the device's local format and time zone. Publishing again updates that entry and its position. For separate named experiments, use distinct channels such as `draft-search-redesign` or `draft-checkout-agent-a`.
 
 A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible and open native build actions when tapped. The picker offers a verified compatible build, shows a queued or running build, or opens **Request Build** on GitHub. See [native build setup](docs/native-builds.md). The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
 
