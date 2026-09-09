@@ -25,7 +25,7 @@ export type DraftCatalog = {
   drafts: Draft[];
 };
 
-/** Device builds verified by trusted CI. Installation opens the EAS build page. */
+/** Device builds verified by trusted CI. Installation hands the verified build to the iOS installer. */
 export type DraftBuild = {
   runtimeVersion: string;
   platform: 'ios';
