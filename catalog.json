@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T13:14:57.604Z",
+  "generatedAt": "2026-09-09T13:15:00.818Z",
   "drafts": [
     {
       "id": "1446a658-0f78-4364-a030-f29eb3f1efe5",
@@ -46,6 +46,27 @@
       ]
     },
     {
+      "id": "567355b1-5de1-44af-801e-6c7931457cee",
+      "name": "[example] iPhone-only native preview",
+      "channel": "draft-pr-5",
+      "branch": "draft-pr-5",
+      "message": "[example] iPhone-only native preview",
+      "createdAt": "2026-09-09T13:14:30.007Z",
+      "gitCommitHash": "20c574dc32ab0603351bb27558c11b97033caa45",
+      "pullRequest": {
+        "number": 5,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/5"
+      },
+      "updates": [
+        {
+          "id": "01a0864e-3ef7-7a47-a63b-40e9ac66b34b",
+          "groupId": "567355b1-5de1-44af-801e-6c7931457cee",
+          "platform": "ios",
+          "runtimeVersion": "b585b87f336c7d3a807921c6c6e80795b9fdd2e0"
+        }
+      ]
+    },
+    {
       "id": "771e4dae-ff9b-4b33-a751-fc3b988c7479",
       "name": "[example] Focus timer",
       "channel": "draft-pr-3",
@@ -63,27 +84,6 @@
           "groupId": "771e4dae-ff9b-4b33-a751-fc3b988c7479",
           "platform": "ios",
           "runtimeVersion": "166ee8786683217e3c8d06b3e8b322e68f80e17d"
-        }
-      ]
-    },
-    {
-      "id": "3e06c3bf-d848-4d3e-950f-7716c3235e9c",
-      "name": "[example] iPhone-only native preview",
-      "channel": "draft-pr-5",
-      "branch": "draft-pr-5",
-      "message": "[example] iPhone-only native preview",
-      "createdAt": "2026-09-09T11:46:28.992Z",
-      "gitCommitHash": "cb89b161139e384c899701c878d5812eded1e8a8",
-      "pullRequest": {
-        "number": 5,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/5"
-      },
-      "updates": [
-        {
-          "id": "01a085fd-aa00-7ed2-a220-94a658f88552",
-          "groupId": "3e06c3bf-d848-4d3e-950f-7716c3235e9c",
-          "platform": "ios",
-          "runtimeVersion": "d9c89e22141f261165d3e46ae7268a3453a1e839"
         }
       ]
     },
