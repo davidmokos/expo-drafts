@@ -12,7 +12,7 @@ The picker uses standard UIKit inset grouped rows, search, a Done button, and pu
 
 Only the latest publication on each channel is listed. Publishing again updates that entry. For separate named experiments, use distinct channels such as `draft-search-redesign` or `draft-checkout-agent-a`.
 
-A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible with **Requires a different build**, and **Find a Compatible Build** opens EAS builds. The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
+A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible and open native build actions when tapped. The picker offers a verified compatible build, shows a queued or running build, or opens **Request Build** on GitHub. See [native build setup](docs/native-builds.md). The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
 
 Selecting a draft changes the native `expo-channel-name` header, downloads the update, verifies its exact ID, and reloads. This also supports switching back to an older update on another channel. If the channel changed after the catalog loaded, the picker restores the previous channel and asks you to refresh.
 
@@ -87,7 +87,7 @@ The button's visibility applies to the current process. Include the plugin with 
 
 ## Native builds from the picker
 
-Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install Compatible Build**, which opens its EAS installation page. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
+Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install compatible build**, which hands the build directly to iOS's installer without opening the EAS website. Confirm the system installation dialog, then reopen the app. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
 
 Build requests require repository write access. Trusted GitHub Actions code validates the request against the current draft catalog and the PR's source commit before dispatching EAS Workflows. The EAS workflow reuses an existing matching internal device build, or creates one. Only a completed build with verified project, runtime, profile, and device distribution metadata gets an install link. Expo and Apple credentials remain in GitHub/EAS.
 
@@ -117,7 +117,7 @@ Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to 
 
 `example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker uses this repository's catalog. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
 
-The current native picker revision uses runtime `4b251db3e96d71fbcd20d1be7d63ddf929309765`. All four example PRs have been republished through EAS Workflows for that runtime. The original manual Amber, Ocean, and Camera experiment entries remain in the catalog and require a different build. See the [validation record](docs/ios-validation.md#current-native-picker-and-publications) for exact update IDs and workflow results.
+The native build actions in commit `6648eee` use runtime `bd60359c5e450058d8f98dbde40e5beefb68fe2e`. PRs #1 through #4 have been republished through EAS Workflows for that runtime. PR #5 changes `ios.supportsTablet` to `false`, producing runtime `d9c89e22141f261165d3e46ae7268a3453a1e839` and a real native mismatch for the build request flow. The original manual Amber, Ocean, and Camera experiment entries remain in the catalog and require different builds. See the [validation record](docs/ios-validation.md#current-native-build-actions-and-publications) for exact update IDs, source commits, and completed checks.
 
 ```sh
 npm ci
@@ -135,7 +135,7 @@ For a connected physical iPhone, you can compile and install locally from `examp
 npm run ios -- --device "YOUR_IPHONE_NAME"
 ```
 
-The script builds Release without Metro. If the existing profile is managed by Xcode, use Automatic signing on the app target in Xcode. See the [iPhone validation notes](docs/ios-validation.md#physical-iphone-validation) for the completed local installation.
+The script builds Release without Metro. If the existing profile is managed by Xcode, use Automatic signing on the app target in Xcode. See the [historical iPhone validation notes](docs/ios-validation.md#historical-physical-iphone-validation) for completed local installations of earlier native revisions.
 
 For an EAS cloud build, register the device with EAS and build the `drafts-device` profile from `example/`:
 
@@ -146,7 +146,7 @@ eas build --profile drafts-device --platform ios
 
 This creates a signed internal Release build. Install it from the EAS build page on a device included in its provisioning profile. The simulator and device profiles use the same native runtime, so both can select the same compatible PR updates. EAS installs the parent package through the example's build hook; see the [workflow guide](docs/workflow.md) for its fingerprint handling.
 
-Run `npm test` for catalog and plugin validation, and `bash tests/ios/run.sh` for the iOS cache transaction tests. Native projects in the example are generated by Expo prebuild and are not committed.
+Run `npm test` for catalog, build request, workflow, and plugin validation. Run `bash tests/ios/run.sh` for the iOS cache transactions, exact build matching, installation URL checks, and native request URL round-trip through the CI parser. Native projects in the example are generated by Expo prebuild and are not committed.
 
 See the [iOS validation record](docs/ios-validation.md) for simulator coverage and the published test updates.
 

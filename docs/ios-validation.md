@@ -1,16 +1,83 @@
 # iOS validation, September 8 and 9, 2026
 
-The package and Drafts Lab were compiled in Release mode and tested on an iPhone 17 Pro Max simulator running iOS 26.3. No Metro server was running while the app selected, downloaded, or launched updates. The native build was compiled locally with Xcode; EAS hosted the actual remote updates.
+This record separates the current native build actions from tests of earlier runtime revisions. Local simulator validation uses an iPhone 17 Pro Max running iOS 26.3. Native apps are compiled in Release mode with Xcode, and EAS hosts the remote updates.
 
 The app uses Expo SDK 57, React Native 0.86.3, and expo-updates 57.0.21. Its EAS project is [@mokosdavid/expo-drafts-lab](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab), and its bundle identifier is `dev.davidmokos.draftslab`.
 
-## Current native picker and publications
+## Current native build actions and publications
+
+Commit [`6648eee`](https://github.com/davidmokos/expo-drafts/commit/6648eee37644a228993513699049e0cc0d32f7f8) adds build actions to incompatible drafts while retaining the standard UIKit picker. Its managed iOS runtime is `bd60359c5e450058d8f98dbde40e5beefb68fe2e`.
+
+Build matching requires the exact iOS runtime and configured device profile. A verified ready build offers "Install compatible build"; queued and building records show progress and an available status link. Missing or failed builds offer "Request Build," which opens a prefilled GitHub issue. Signing in and submitting the issue is a separate browser action. Opening the form alone starts no build. Optional build metadata failures do not block compatible update selection. See [native build setup](native-builds.md) for the request and installation contract.
+
+PRs #1 through #4 merged this native revision without rewriting their history and republished successfully. The EAS outputs, GitHub artifacts, and catalog agree on the exact iOS update ID, group, source commit, and runtime for each preview.
+
+| Preview | Channel | iOS update ID |
+| ------- | ------- | ------------- |
+| [PR #1 workspace](https://github.com/davidmokos/expo-drafts/pull/1) | `draft-pr-1` | `01a085fc-0bad-7dce-809c-282e18f00986` |
+| [PR #2 Reading list](https://github.com/davidmokos/expo-drafts/pull/2) | `draft-pr-2` | `01a085fc-05ab-7d36-95e2-e8ef19dd5776` |
+| [PR #3 Focus timer](https://github.com/davidmokos/expo-drafts/pull/3) | `draft-pr-3` | `01a085fc-233a-7582-9166-d5c70c3ce7fb` |
+| [PR #4 Color studio](https://github.com/davidmokos/expo-drafts/pull/4) | `draft-pr-4` | `01a085fc-01ae-72d1-9293-5159bdad68db` |
+
+| PR | Source commit | Update group |
+| -- | ------------- | ------------ |
+| #1 | [`474a766`](https://github.com/davidmokos/expo-drafts/commit/474a766febfe5ed87c313ccde4db999569a16fcf) | `37165c0a-2865-47d2-ac4c-403ba1b18821` |
+| #2 | [`de7c50c`](https://github.com/davidmokos/expo-drafts/commit/de7c50c70e0c2c95af001ed4fc38129e7a9afc14) | `02aff440-d060-4a7a-b55b-530f9c2a5692` |
+| #3 | [`b6b9dcb`](https://github.com/davidmokos/expo-drafts/commit/b6b9dcbca93a1a4474315adfe579894147e13895) | `b90629d8-bc46-4912-8147-491c6321801e` |
+| #4 | [`bf0bac6`](https://github.com/davidmokos/expo-drafts/commit/bf0bac6dfcb46e70b3516addc1acd03f60229c2b) | `357a9832-0156-4da4-bdaf-646c0ec433e5` |
+
+All four EAS workflows, GitHub publishing runs, and package checks passed:
+
+| PR | EAS Workflow | GitHub publishing run | Package checks |
+| -- | ------------ | --------------------- | -------------- |
+| #1 | [01a085fa-e6fc](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a085fa-e6fc-764a-b7c6-f5595456a288) | [34346963120](https://github.com/davidmokos/expo-drafts/actions/runs/34346963120) | [34346963250](https://github.com/davidmokos/expo-drafts/actions/runs/34346963250) |
+| #2 | [01a085fa-e31e](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a085fa-e31e-7b06-b72a-d1e2261b3254) | [34346963251](https://github.com/davidmokos/expo-drafts/actions/runs/34346963251) | [34346963290](https://github.com/davidmokos/expo-drafts/actions/runs/34346963290) |
+| #3 | [01a085fa-f7e8](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a085fa-f7e8-7d36-8d65-6a7f64490e8f) | [34346967886](https://github.com/davidmokos/expo-drafts/actions/runs/34346967886) | [34346967822](https://github.com/davidmokos/expo-drafts/actions/runs/34346967822) |
+| #4 | [01a085fa-e477](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a085fa-e477-7415-b46a-3dad4d8492cd) | [34346966031](https://github.com/davidmokos/expo-drafts/actions/runs/34346966031) | [34346965995](https://github.com/davidmokos/expo-drafts/actions/runs/34346965995) |
+
+[Catalog commit `670c758`](https://github.com/davidmokos/expo-drafts/blob/670c758545e56bc079866e8d4bf8cc4f29f32ac9/catalog.json) retained all four previews after their concurrent publications, alongside the original Amber, Ocean, and Camera experiment entries. Those three original entries require different runtimes.
+
+[PR #5, iPhone-only native preview](https://github.com/davidmokos/expo-drafts/pull/5) changes `ios.supportsTablet` from `true` to `false`. Source commit [`cb89b16`](https://github.com/davidmokos/expo-drafts/commit/cb89b161139e384c899701c878d5812eded1e8a8) therefore resolves runtime `d9c89e22141f261165d3e46ae7268a3453a1e839`. Its [publishing run 34347112985](https://github.com/davidmokos/expo-drafts/actions/runs/34347112985) succeeded, and the live catalog records iOS update `01a085fd-aa00-7ed2-a220-94a658f88552` in group `3e06c3bf-d848-4d3e-950f-7716c3235e9c` on `draft-pr-5`. This is a native configuration change, so the current `bd60359…` build cannot launch it.
+
+## Completed checks for native build actions
+
+- Package TypeScript build, ESLint, and example TypeScript validation passed.
+- All 34 Node tests passed, including build catalog validation, trusted build requests, EAS build result verification, config plugin options, and concurrent catalog publication.
+- Four native transaction tests passed with real SQLite, covering rollback, cache adoption, startup recovery, and transaction ownership.
+- Six Foundation build catalog test groups passed, covering exact runtime/platform/profile matching, build state ordering, project validation, verified installation URLs, encoded request bodies, and rejection of invalid GitHub request destinations.
+- A request URL generated by native code round-tripped through browser query decoding and the trusted CI parser, preserving Unicode, quotes, newlines, and literal `+` characters.
+- The local iOS Release app with runtime `bd60359c5e450058d8f98dbde40e5beefb68fe2e` compiled and installed on the simulator.
+- The picker's Request Build action opened the browser's GitHub login handoff for the prefilled issue. This check covered opening the request page, not submitting an issue or starting a build.
+
+## EAS request and build reuse checks
+
+Authenticated build request [#6](https://github.com/davidmokos/expo-drafts/issues/6) used the native picker's request format. GitHub verified repository write access, the current PR #5 update and source commit, then dispatched EAS Workflows. The first attempt encountered an Apple server error while refreshing its ad hoc provisioning profile; the app displayed the failure and offered a new request.
+
+The initial base build succeeded in EAS, but GitHub's result parser rejected an omitted simulator hint. Commit [`f610d43`](https://github.com/davidmokos/expo-drafts/commit/f610d43fcaf6f39d2637593cbc85146992aec1eb) accepts an absent workflow hint while still requiring explicit physical-device metadata from `eas build:view`. A regression fixture covers the actual EAS output. [Package checks 34348236814](https://github.com/davidmokos/expo-drafts/actions/runs/34348236814) passed.
+
+A new request for PR #2 completed successfully in [GitHub run 34348283520](https://github.com/davidmokos/expo-drafts/actions/runs/34348283520) and [EAS Workflow 01a08608-ab03](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08608-ab03-7cd4-83d6-55caa65900bf). `get-build` reused PR #1's exact device build `163c8594-3ab2-4b7c-a120-b4be64646c7b` because the runtimes matched. The native build job was skipped. The published build catalog contained the verified ready record and canonical EAS installation link.
+
+The PR #5 request succeeded on its second [GitHub run attempt](https://github.com/davidmokos/expo-drafts/actions/runs/34347685265/attempts/2) through [EAS Workflow 01a08608-c226](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08608-c226-7b47-b7b2-946a4b5c7034). It created device build [f4ffa64b](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/f4ffa64b-d926-4850-8834-c26271eb23bd) for the exact PR #5 source and runtime. The downloaded IPA passed strict signature verification, contained the `d9c89e…` fingerprint and iPhone-only device family `[1]`, and included the user's phone in its ad hoc profile. The build catalog's ready state appeared automatically in the visible picker. Its Install compatible build action opened the exact `f4ffa64b…` EAS page, displaying Finished and an Install button. The phone remains on the shared-runtime EAS build so the user can try this native upgrade from the picker.
+
+## Current simulator and phone checks
+
+The simulator launched PR workspace, Reading list, Focus timer, and Color studio through the native picker with runtime `bd60359c5e450058d8f98dbde40e5beefb68fe2e`. Each app displayed its exact published update ID from the current table. Reopening the picker marked the selected entry as current.
+
+PR #5 remained incompatible on that binary. Its native actions showed request, queued, in-progress, and failed states from the live build catalog. Request Build opened GitHub's login handoff; View Build Status opened the exact GitHub run. A separate authenticated submission of the same native-format issue body exercised the build request trigger.
+
+Installing a locally compiled iPhone-only simulator binary changed the runtime to `d9c89e22141f261165d3e46ae7268a3453a1e839`. Its actual `UIDeviceFamily` was `[1]`. PR #5 then became compatible, launched EAS Update `01a085fd-aa00-7ed2-a220-94a658f88552`, and retained that exact update after a cold restart. PRs #1–4 correctly required the other native runtime. Their ready build action opened the exact EAS page for build `163c8594…`, which displayed Finished and an Install button without requiring an Expo login. The simulator check stops at the EAS installation page; physical-device installation is verified separately below. Restoring the shared-runtime binary launched its compatible embedded fallback, without running the cached PR #5 update.
+
+EAS device build [163c8594](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/163c8594-3ab2-4b7c-a120-b4be64646c7b) completed from PR #1 source. The downloaded IPA passed `codesign --verify --deep --strict`, contained the expected `bd60359…` fingerprint, and included the user's phone in its ad hoc profile. `devicectl` installed it on the connected iPhone 17 Pro Max running iOS 27 Beta, launched it, and confirmed the installed app process was still running. This confirms the real EAS artifact's installation and launch; UI interaction checks use the simulator.
+
+The sections below preserve completed checks for earlier native runtimes. Their update IDs and physical-phone results belong to those revisions.
+
+## Historical UIKit picker and publications
 
 Commit [`d3baee0`](https://github.com/davidmokos/expo-drafts/commit/d3baee015d8c9745014d527e515cfa7cd0a6a312) simplifies the picker to standard UIKit inset grouped rows, a search field, a Done button, pull to refresh, and a checkmark for the current update. Rows show a preview name and PR number, or a channel for manual previews. UIKit supplies the navigation title and system light or dark appearance. The draggable launcher is a `UIButton` with system glass styling on iOS 26 and later, and tinted styling on earlier versions. Commit hashes and runtime details remain in catalog metadata rather than the picker rows.
 
-The managed iOS runtime is now `4b251db3e96d71fbcd20d1be7d63ddf929309765`. All four PR branches merged the native change without rewriting their history and republished successfully through EAS Workflows. Each artifact matched the catalog's exact iOS update ID, update group, source commit, and runtime.
+That revision used managed iOS runtime `4b251db3e96d71fbcd20d1be7d63ddf929309765`. All four PR branches merged the native change without rewriting their history and republished successfully through EAS Workflows. Each artifact matched the catalog's exact iOS update ID, update group, source commit, and runtime.
 
-| Preview | Channel | Current iOS update ID |
+| Preview | Channel | Historical iOS update ID |
 | ------- | ------- | --------------------- |
 | [PR #1 workspace](https://github.com/davidmokos/expo-drafts/pull/1) | `draft-pr-1` | `01a08311-256d-79a0-a5ae-0dc3fcaa1425` |
 | [PR #2 Reading list](https://github.com/davidmokos/expo-drafts/pull/2) | `draft-pr-2` | `01a08311-7c39-7dc5-bcc8-ded78524f3e6` |
@@ -26,11 +93,11 @@ All of these EAS workflows, GitHub publishing runs, and package checks passed:
 | #3 | [01a08310-696f](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08310-696f-79e0-a60f-3dbe1849618f) | [34284232251](https://github.com/davidmokos/expo-drafts/actions/runs/34284232251) | [34284232246](https://github.com/davidmokos/expo-drafts/actions/runs/34284232246) |
 | #4 | [01a08310-b084](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08310-b084-787f-8ffc-cea025a0289c) | [34284244050](https://github.com/davidmokos/expo-drafts/actions/runs/34284244050) | [34284244140](https://github.com/davidmokos/expo-drafts/actions/runs/34284244140) |
 
-[Catalog commit `38c5183`](https://github.com/davidmokos/expo-drafts/blob/38c5183a16a347cd6ebe8eaf01b2686b5b96b8d3/catalog.json) retains seven entries. The four PRs match the new runtime. The manual Amber and Ocean entries still use `49c985303fd99723dc5d59a62ef5e31c1c34d457`, and Camera experiment uses `drafts-lab-native-v2`; all three are incompatible with the new native revision. Incompatible rows display "Requires a different build" and cannot launch. "Find a Compatible Build" opens the configured EAS build page.
+[Catalog commit `38c5183`](https://github.com/davidmokos/expo-drafts/blob/38c5183a16a347cd6ebe8eaf01b2686b5b96b8d3/catalog.json) retained seven entries. The four PRs matched that runtime. The manual Amber and Ocean entries used `49c985303fd99723dc5d59a62ef5e31c1c34d457`, and Camera experiment used `drafts-lab-native-v2`; all three were incompatible with that native revision. Its incompatible rows displayed "Requires a different build" and could not launch. Its "Find a Compatible Build" link opened the configured EAS builds page. These labels predate the current per-draft build actions.
 
-## Current simulator checks
+## Historical UIKit simulator checks
 
-- Launched PR workspace, Reading list, Focus timer, and Color studio through the native picker. Each app's diagnostic output showed its full update ID matching the current publications table and runtime `4b251db3e96d71fbcd20d1be7d63ddf929309765`.
+- Launched PR workspace, Reading list, Focus timer, and Color studio through the native picker. Each app's diagnostic output showed its full update ID matching the historical UIKit publications table and runtime `4b251db3e96d71fbcd20d1be7d63ddf929309765`.
 - Reopened the picker on Reading list, Focus timer, and Color studio and confirmed each current entry had a checkmark.
 - Checked the native picker in system light and dark appearance.
 - Filtered the draft list with search and verified that tapping an incompatible draft did not launch it.
@@ -38,7 +105,7 @@ All of these EAS workflows, GitHub publishing runs, and package checks passed:
 
 The historical checks below apply to the earlier runtime.
 
-## Earlier published test updates
+## Historical initial test updates
 
 The earlier installed native runtime was `49c985303fd99723dc5d59a62ef5e31c1c34d457`. Compatibility in this table refers to that build.
 
@@ -54,7 +121,7 @@ The earlier installed native runtime was `49c985303fd99723dc5d59a62ef5e31c1c34d4
 
 The Camera experiment uses an explicit test runtime to exercise the disabled state; it does not add camera functionality. Normal previews use the fingerprint runtime policy.
 
-## Earlier simulator checks
+## Historical initial simulator checks
 
 - Launched the embedded app without a development server.
 - Opened the native picker using its floating button.
@@ -80,7 +147,7 @@ The Camera experiment uses an explicit test runtime to exercise the disabled sta
 
 The demo interactions use state local to the current JavaScript session. Reading progress, saved palettes, and timer state reset when the app restarts or switches updates. The selected update itself persists across restarts.
 
-## Earlier PR workflow validation
+## Historical initial PR workflow validation
 
 The repository's `EXPO_TOKEN` secret is configured. [PR #1](https://github.com/davidmokos/expo-drafts/pull/1) contains a JavaScript-only change to the default app screen, preserving the Amber and Ocean variants.
 
@@ -102,7 +169,7 @@ Three further PRs exercised separate previews through the same EAS Workflows pip
 
 Their publishing runs overlapped. [Catalog commit `c34b626`](https://github.com/davidmokos/expo-drafts/blob/c34b626bd3171c98d21fda71bb6606e57c82740a/catalog.json) retained all seven channels, including PRs #1 through #4 and the three original drafts. Each new catalog entry matched its workflow artifact's exact update ID, update group, source commit, and runtime. All three used the existing installed runtime and launched without rebuilding the simulator app.
 
-## Automated checks
+## Historical automated checks
 
 - Package TypeScript build and ESLint passed.
 - Example TypeScript validation and Expo dependency alignment passed.
@@ -113,7 +180,7 @@ Their publishing runs overlapped. [Catalog commit `c34b626`](https://github.com/
 - A clean macOS checkout and Ubuntu CI using Node 24 both resolved the iOS runtime to `49c985303fd99723dc5d59a62ef5e31c1c34d457`. The CI result is recorded in [run 34271935734](https://github.com/davidmokos/expo-drafts/actions/runs/34271935734).
 - `npm pack` succeeded with generated Android build files excluded.
 
-## Physical iPhone validation
+## Historical physical iPhone validation
 
 A local signed Release build of the simplified native picker completed with runtime `4b251db3e96d71fbcd20d1be7d63ddf929309765`, and `codesign --verify --deep --strict` passed. `devicectl` installed and activated it on the user's iPhone 17 Pro Max running iOS 27 Beta, and a subsequent process check confirmed that the same app process was still running. Signing reused the existing Xcode-managed profile with Automatic signing, without a fresh Apple login. The installation was local; no EAS cloud device build was run. This confirms installation and process launch, with UI interaction checks recorded separately for the simulator.
 
