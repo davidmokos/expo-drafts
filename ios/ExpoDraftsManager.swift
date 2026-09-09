@@ -11,6 +11,8 @@ final class ExpoDraftsManager {
   private(set) var switching = false
   private var catalogTask: URLSessionDataTask?
   private var buildsCatalogTask: URLSessionDataTask?
+  private var installationRequest: DraftBuildManifestRequest?
+  private var preparingInstallation = false
   private var buildsCatalogGeneration = UUID()
   private(set) var buildsCatalog: DraftBuildCatalog?
   private(set) var buildsCatalogLoading = false
@@ -214,6 +216,55 @@ final class ExpoDraftsManager {
     }
   }
 
+  func installBuild(for draft: DraftEntry, completion: @escaping (Error?) -> Void) {
+    precondition(Thread.isMainThread)
+    guard !switching, !preparingInstallation else {
+      completion(DraftsError.message("Wait for the current draft action to finish."))
+      return
+    }
+    guard let update = draft.iosUpdate, let build = build(for: draft),
+      build.state == "ready", build.platform == "ios", build.profile == buildProfile,
+      build.runtimeVersion == update.runtimeVersion, build.verifiedInstallURL != nil,
+      let buildID = build.buildId, let bundleIdentifier = Bundle.main.bundleIdentifier else {
+      completion(DraftsError.message("This draft has no verified compatible device build. Refresh its build status and try again."))
+      return
+    }
+    #if targetEnvironment(simulator)
+    completion(DraftsError.message("Device builds cannot be installed in the simulator. Open this draft on a registered iPhone or iPad to install it."))
+    #else
+    preparingInstallation = true
+    do {
+      let request = try DraftBuildManifestRequest(projectID: projectID, buildID: buildID, bundleIdentifier: bundleIdentifier) { [weak self] result in
+        guard let self else { return }
+        self.installationRequest = nil
+        guard !self.switching, let currentBuild = self.build(for: draft),
+          currentBuild.buildId == buildID, currentBuild.verifiedInstallURL != nil else {
+          self.preparingInstallation = false
+          completion(DraftsError.message("The selected build changed. Refresh its status and try again."))
+          return
+        }
+        switch result {
+        case .failure(let error):
+          self.preparingInstallation = false
+          completion(error)
+        case .success(let installerURL):
+          // A successful open only hands the manifest to iOS. Installation may be
+          // cancelled or fail later; the app must not record it as completed.
+          UIApplication.shared.open(installerURL, options: [:]) { success in
+            self.preparingInstallation = false
+            completion(success ? nil : DraftsError.message("iOS could not open the installer. Try again on a registered physical device."))
+          }
+        }
+      }
+      installationRequest = request
+      request.start()
+    } catch {
+      preparingInstallation = false
+      completion(error)
+    }
+    #endif
+  }
+
   func compatibility(_ draft: DraftEntry) -> String? {
     guard updatesEnabled, !runtimeVersion.isEmpty else { return "Install a release build with EAS Update enabled" }
     guard let update = draft.iosUpdate else { return "No iOS update · Needs new EAS build" }
@@ -227,6 +278,10 @@ final class ExpoDraftsManager {
 
   func launch(_ draft: DraftEntry, completion: @escaping (Result<Void, Error>) -> Void) {
     guard !switching else { return }
+    guard !preparingInstallation else {
+      completion(.failure(DraftsError.message("Wait for the installation handoff to finish before opening a draft.")))
+      return
+    }
     if let reason = compatibility(draft) {
       completion(.failure(DraftsError.message(reason)))
       return

@@ -87,7 +87,7 @@ The button's visibility applies to the current process. Include the plugin with 
 
 ## Native builds from the picker
 
-Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install compatible build**, which opens its EAS installation page. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
+Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install compatible build**, which hands the build directly to iOS's installer without opening the EAS website. Confirm the system installation dialog, then reopen the app. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
 
 Build requests require repository write access. Trusted GitHub Actions code validates the request against the current draft catalog and the PR's source commit before dispatching EAS Workflows. The EAS workflow reuses an existing matching internal device build, or creates one. Only a completed build with verified project, runtime, profile, and device distribution metadata gets an install link. Expo and Apple credentials remain in GitHub/EAS.
 

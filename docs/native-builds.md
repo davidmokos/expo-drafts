@@ -4,7 +4,7 @@ The picker reads two catalogs. `catalog.json` lists EAS Updates, and `build-cata
 
 ## Request and install flow
 
-1. Open an incompatible draft. If a verified matching build is ready, select **Install Compatible Build** to open its EAS installation page.
+1. Open an incompatible draft. If a verified matching build is ready, select **Install compatible build** to hand it directly to the iOS installer. Confirm installation in the system dialog; the app does not open the EAS website.
 2. If no build is available, select **Request Build**. Safari opens a prefilled GitHub issue with the preview's identity. Sign in to GitHub and submit the issue. Merely opening the page does not create a build.
 3. GitHub Actions verifies that the requester has write, maintain, or admin access. It reads the current catalog from the trusted catalog branch, verifies the update ID and runtime, and uses the catalog's source commit. PRs must still point to that exact commit in the same repository. A stale request must be refreshed.
 4. The workflow publishes a queued record, installs source dependencies, and verifies that the checkout reproduces the requested fingerprint. It uploads the source with the trusted EAS build workflow.
@@ -56,7 +56,21 @@ Register each test device with `eas device:create`, then configure the internal 
 
 The example enables `refresh_ad_hoc_provisioning_profile: true`. This requires an App Store Connect API key assigned to the app for EAS to refresh its managed profile without an interactive Apple sign-in. Existing valid signing artifacts can be reused. See [Expo's internal distribution and CI requirements](https://docs.expo.dev/build/internal-distribution/).
 
-The app opens a verified EAS build page for installation. It does not download or silently replace its own executable, and no TestFlight setup is required for this ad hoc workflow.
+The app hands a verified EAS installation manifest to iOS using `itms-services`. iOS downloads and installs the signed app after confirmation. Reopen the app after installation and select the draft. TestFlight is not required for this ad hoc workflow.
+
+The installer must be able to fetch the manifest and IPA without the app's browser cookies. The example uses EAS's default unauthenticated internal build access. Keep private builds behind your existing access controls; opening the EAS website is an explicit fallback when direct installation is unavailable. See [Apple's wireless installation documentation](https://support.apple.com/en-gb/guide/deployment/depce7cefc4d/1/web) and [Expo's internal distribution access settings](https://docs.expo.dev/build/internal-distribution/).
+
+## Direct installation
+
+The package derives the manifest URL from the configured EAS project UUID and the verified build UUID:
+
+```text
+https://api.expo.dev/v2/projects/{projectId}/builds/{buildId}/manifest.plist
+```
+
+This is the endpoint used by EAS CLI for internal iOS installation. The app validates the manifest, then opens an `itms-services` URL through UIKit. The catalog retains the stable build identity. It does not store the manifest's temporary signed IPA URL.
+
+The system installer requires a physical iPhone. The simulator can test URL and manifest validation, but cannot install a device IPA. The app can confirm that iOS accepted the handoff, not whether the user confirmed or the installation completed.
 
 ## Verification and failure handling
 
