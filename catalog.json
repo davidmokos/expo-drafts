@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T11:45:15.629Z",
+  "generatedAt": "2026-09-09T11:45:21.842Z",
   "drafts": [
+    {
+      "id": "b90629d8-bc46-4912-8147-491c6321801e",
+      "name": "[example] Focus timer",
+      "channel": "draft-pr-3",
+      "branch": "draft-pr-3",
+      "message": "[example] Focus timer",
+      "createdAt": "2026-09-09T11:44:48.954Z",
+      "gitCommitHash": "b6b9dcbca93a1a4474315adfe579894147e13895",
+      "pullRequest": {
+        "number": 3,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/3"
+      },
+      "updates": [
+        {
+          "id": "01a085fc-233a-7582-9166-d5c70c3ce7fb",
+          "groupId": "b90629d8-bc46-4912-8147-491c6321801e",
+          "platform": "ios",
+          "runtimeVersion": "bd60359c5e450058d8f98dbde40e5beefb68fe2e"
+        }
+      ]
+    },
     {
       "id": "02aff440-d060-4a7a-b55b-530f9c2a5692",
       "name": "[example] Reading list",
@@ -42,27 +63,6 @@
           "groupId": "357a9832-0156-4da4-bdaf-646c0ec433e5",
           "platform": "ios",
           "runtimeVersion": "bd60359c5e450058d8f98dbde40e5beefb68fe2e"
-        }
-      ]
-    },
-    {
-      "id": "791612a3-eafb-4522-a32f-e273aebaed3d",
-      "name": "[example] Focus timer",
-      "channel": "draft-pr-3",
-      "branch": "draft-pr-3",
-      "message": "[example] Focus timer",
-      "createdAt": "2026-09-08T22:09:20.800Z",
-      "gitCommitHash": "caba3f5a9666f995e8703e7f52e64fc41d9c704a",
-      "pullRequest": {
-        "number": 3,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/3"
-      },
-      "updates": [
-        {
-          "id": "01a08311-8da0-7f8f-bd0f-781515385bee",
-          "groupId": "791612a3-eafb-4522-a32f-e273aebaed3d",
-          "platform": "ios",
-          "runtimeVersion": "4b251db3e96d71fbcd20d1be7d63ddf929309765"
         }
       ]
     },
