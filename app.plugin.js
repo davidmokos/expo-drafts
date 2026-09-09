@@ -30,7 +30,9 @@ function withExpoDrafts(config, options = {}) {
     if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(projectId || '')) {
       throw new Error('expo-drafts: provide projectId or run eas init first.');
     }
-    catalogUrl = httpsURL(options.catalogUrl, 'catalogUrl');
+    if (options.catalogUrl) {
+      catalogUrl = httpsURL(options.catalogUrl, 'catalogUrl');
+    }
     buildUrl = httpsURL(
       options.buildUrl || `https://expo.dev/projects/${projectId}/builds`,
       'buildUrl'
@@ -81,7 +83,18 @@ function withExpoDrafts(config, options = {}) {
       ExpoDraftsBuildsCatalogURL: buildsCatalogUrl,
       ExpoDraftsBuildRequestURL: buildRequestUrl,
       ExpoDraftsBuildProfile: buildProfile,
+      ExpoDraftsAuthScheme: `expo-drafts.${(projectId || '').toLowerCase()}`,
     });
+    if (enabled && !catalogUrl) {
+      const authScheme = `expo-drafts.${projectId.toLowerCase()}`;
+      const urlTypes = mod.modResults.CFBundleURLTypes || [];
+      if (!urlTypes.some((entry) => entry.CFBundleURLSchemes?.includes(authScheme))) {
+        mod.modResults.CFBundleURLTypes = [
+          ...urlTypes,
+          { CFBundleURLName: 'expo-drafts-auth', CFBundleURLSchemes: [authScheme] },
+        ];
+      }
+    }
     return mod;
   });
   return withAndroidManifest(config, (mod) => {
