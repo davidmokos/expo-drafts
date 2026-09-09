@@ -1,10 +1,49 @@
 # iOS validation, September 8 and 9, 2026
 
-This record separates the current Running and Installation requested UI from tests of earlier runtime revisions. Local simulator validation uses an iPhone 17 Pro Max running iOS 26.3. Native apps are compiled in Release mode with Xcode, and EAS hosts the remote updates.
+This record separates the current bundled-version action from tests of earlier runtime revisions. Local simulator validation uses an iPhone 17 Pro Max running iOS 26.3. Native apps are compiled in Release mode with Xcode, and EAS hosts the remote updates.
 
 The app uses Expo SDK 57, React Native 0.86.3, and expo-updates 57.0.21. Its EAS project is [@mokosdavid/expo-drafts-lab](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab), and its bundle identifier is `dev.davidmokos.draftslab`.
 
-## Running bundle and installation request recovery
+## Return to the bundled version
+
+Commit [`ad23424`](https://github.com/davidmokos/expo-drafts/commit/ad234246f57dd0018655b971701ebb3f0fd568c0) adds **Run bundled version** below Running while a downloaded bundle is active. It restores the installed native build's original update headers, prepares the exact embedded UUID locally, and verifies the launched identity before committing. It does not require a catalog entry or a download. A failed selection restores the previous headers and cache metadata; an interrupted selection uses the existing startup recovery transaction.
+
+The final native implementation is [`97e6f03`](https://github.com/davidmokos/expo-drafts/commit/97e6f03026b9e105546a73a98998b9684251c936), which binds the embedded row and clears server metadata in one SQLite transaction. Its shared iOS runtime is `8bc256182be4455e53cb429fb3771559e0ee5a7c`; PR #5 uses `dc86b332558e23da1051e6bed8d39016ef2f9e60`. The Release simulator archive compiled successfully with embedded UUID `008b90ef-c78d-4a72-b7f9-945b847f03d5`.
+
+TypeScript builds, lint, example typecheck, all 34 Node tests, and all native test suites passed. The 11 transaction groups execute against real SQLite and the installed Expo SDK 57 launcher and loader policies. They cover stale metadata, exact embedded identity, database reopening, returning to a published update older than the native build, wrong identities, failed selection, missing embedded rows, inherited headers, and interrupted recovery. A negative control removes the atomic binding from a temporary source copy and correctly fails the regression test. No production source was altered by that control.
+
+On the final Release simulator build, the picker launched Reading List update `01a086c9-f860-71cf-926a-7389ab3ae681`. **Run bundled version** returned to the original embedded UI and exact UUID `008b90ef-c78d-4a72-b7f9-945b847f03d5`. A cold restart retained that embedded selection. Running correctly identified the bundled source, and the return action was hidden while it was already active. The picker then successfully launched Color Studio update `01a086ca-351c-7c8e-87dc-626048166cf8`.
+
+A separate simulator fixture removed only that exact embedded cache row while Color Studio was active, after saving a database backup. Returning through the same UI restored the signed embedded bundle's cache row and launched its exact UUID. It remained selected after another cold restart, and the settled preferences contained no pending selection transaction. This explicitly exercises cache recovery; it does not claim a naturally occurring eviction or modify phone data.
+
+### Final publications for Run bundled version
+
+All five PR branches merged native implementation [`97e6f03`](https://github.com/davidmokos/expo-drafts/commit/97e6f03026b9e105546a73a98998b9684251c936) and republished successfully. The EAS outputs, GitHub artifacts, and catalog agree on each exact iOS update ID, source commit, group, and runtime. PRs #1–4 use `8bc256182be4455e53cb429fb3771559e0ee5a7c`; PR #5 preserves `ios.supportsTablet: false` and uses `dc86b332558e23da1051e6bed8d39016ef2f9e60`.
+
+| Preview | Channel | Source | iOS update ID | Successful CI |
+| --- | --- | --- | --- | --- |
+| [PR #1: [example] previews a pull request from GitHub Actions](https://github.com/davidmokos/expo-drafts/pull/1) | `draft-pr-1` | [`e55454b`](https://github.com/davidmokos/expo-drafts/commit/e55454b55248556fd2a49972a2fd4204d105ff51) | `01a086ca-5067-7448-958f-7bebb01f5835` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a086c9-3005-7f0f-b1a9-b58d65e4a437) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34370397806) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34370397627) |
+| [PR #2: [example] Reading list](https://github.com/davidmokos/expo-drafts/pull/2) | `draft-pr-2` | [`a46f493`](https://github.com/davidmokos/expo-drafts/commit/a46f4933bc1486d4685f8b18e2eeddc20f5efcdc) | `01a086c9-f860-71cf-926a-7389ab3ae681` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a086c8-e5e3-7491-8929-8456a1fb4556) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34370367302) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34370367212) |
+| [PR #3: [example] Focus timer](https://github.com/davidmokos/expo-drafts/pull/3) | `draft-pr-3` | [`3b3e86e`](https://github.com/davidmokos/expo-drafts/commit/3b3e86e3704e2cc7615bc24abc6007f7057718b5) | `01a086ca-2ba9-7cc0-aab5-e370c8d49ed8` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a086c9-157c-7853-aff1-f6deeb929e51) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34370377003) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34370377173) |
+| [PR #4: [example] Color studio](https://github.com/davidmokos/expo-drafts/pull/4) | `draft-pr-4` | [`9f45b10`](https://github.com/davidmokos/expo-drafts/commit/9f45b10d71bed3dddc26ccfd4accf1c3e4786631) | `01a086ca-351c-7c8e-87dc-626048166cf8` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a086c9-1464-7834-829d-c3e16e9f7ab6) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34370369133) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34370369223) |
+| [PR #5: [example] iPhone-only native preview](https://github.com/davidmokos/expo-drafts/pull/5) | `draft-pr-5` | [`2e16f36`](https://github.com/davidmokos/expo-drafts/commit/2e16f36b068435fdb92e8e4fb4145532d60404b4) | `01a086ca-4cbd-762f-af74-4887556d590f` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a086c9-26cb-7c38-acf0-13ed7469d626) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34370393220) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34370394833) |
+
+[Catalog commit `058970d`](https://github.com/davidmokos/expo-drafts/blob/058970deae5fd7195184c104c7300bc154ed48fc/catalog.json) contains all five final previews and retains the earlier Amber, Ocean, and Camera entries with their actual incompatible runtimes.
+
+### Final device builds
+
+Both EAS workflows and GitHub native-build runs succeeded. Both builds use the `drafts-device` profile, internal distribution, and a physical iOS device target. Their verified ready catalog records match the requested native fingerprints and exact source commits.
+
+| Native build | Source | Embedded runtime | Successful CI |
+| --- | --- | --- | --- |
+| [Shared (PRs #1–4): `9e4362c2-76f8-4170-aaf4-f9c5978f29a7`](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/9e4362c2-76f8-4170-aaf4-f9c5978f29a7) | [`a46f493`](https://github.com/davidmokos/expo-drafts/commit/a46f4933bc1486d4685f8b18e2eeddc20f5efcdc) | `8bc256182be4455e53cb429fb3771559e0ee5a7c` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a086cc-a782-7d7e-bdf3-ad8f2984e00a) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34370783652) |
+| [PR #5 (iPhone only): `b6eb5613-280a-45d0-9bcb-283062ca211a`](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/b6eb5613-280a-45d0-9bcb-283062ca211a) | [`2e16f36`](https://github.com/davidmokos/expo-drafts/commit/2e16f36b068435fdb92e8e4fb4145532d60404b4) | `dc86b332558e23da1051e6bed8d39016ef2f9e60` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a086cd-6f73-78f5-9820-9c509d7c0e23) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34370886497) |
+
+Both downloaded IPAs passed strict signature verification and include the user's phone in their ad hoc profiles. The shared build targets iPhone and iPad (`UIDeviceFamily` `[1, 2]`) and embeds bundle `5e68c556-5b06-41b9-ae6d-40cfae6117fa`. PR #5 targets iPhone (`[1]`) and embeds bundle `5d2e9970-9619-4f79-9a60-485a00dbc8d8`. Both use app version `1.0.0` and build number `1`. These results verify archive identity and provisioning; physical installation and in-app switching are recorded separately.
+
+The final shared archive was installed successfully on the user's iPhone through `devicectl` at 15:43 UTC on September 9, without uninstalling the app or deleting its data. UI validation of the new return action on this phone is pending: Xcode reported that the device was locked, and the user was asked to unlock it. The successful return and cold-restart checks above were performed on the simulator.
+
+## Earlier installation request and Running UI
 
 Commit [`e37a0cb`](https://github.com/davidmokos/expo-drafts/commit/e37a0cb03f567c2dd8b622bbef41cf3894c9fb07) adds a native **Running** section and a persistent **Installation requested** status. The shared native runtime is `0b52dae850fb723b136dfed86d4051693ab14617`. PR #5's iPhone-only configuration resolves to `0d6f42d8d4867b6511c7631dfebef1a6c20ebf4f`.
 
@@ -53,7 +92,11 @@ Both EAS builds finished with internal distribution for physical iOS devices. Th
 
 Both IPAs passed strict code-signature verification, and both ad hoc provisioning profiles included the user's phone. The shared archive targets iPhone and iPad (`UIDeviceFamily` `[1, 2]`); PR #5 targets iPhone (`[1]`). Both use app version `1.0.0` and build number `1`. Their embedded bundle IDs are `29ce744f-0820-4547-9224-31c9f84cd8bc` and `381534ca-72e3-4adb-8d6a-fb1980525168`, respectively. These checks verify the artifacts and device provisioning; physical installer behavior for this revision is a separate check.
 
-The shared archive was installed successfully on the user's iPhone with `devicectl` at 14:19 UTC on September 9. This bootstraps the new native UI without deleting app data. Phone UI automation could not start because the device was connected over Wi-Fi rather than USB; actual installation-request and first-launch UI checks on this revision are pending a wired connection.
+The shared archive was installed successfully on the user's iPhone with `devicectl` at 14:19 UTC on September 9 without deleting app data. After a USB connection became available, actual phone UI checks finished at 15:16 UTC. The initial Running row identified embedded UUID `29ce744f-0820-4547-9224-31c9f84cd8bc` on runtime `0b52dae8…`.
+
+The real iOS installation prompt was canceled once. Installation requested remained visible with its activity indicator and Home Screen instruction, survived closing and reopening the picker and restarting the app, and disappeared after Hide Status. Running continued to identify the original bundle. No fixture was used on the phone.
+
+A second real installer request was confirmed, followed by Home and a 42-second wait. Reopening the app showed runtime `0d6f42d8d4867b6511c7631dfebef1a6c20ebf4f`, cleared Installation requested, and restored already cached PR #5 EAS Update `01a08681-45fd-7294-85ed-926593be7598`. The Running details and PR checkmark matched that identity. No additional local installation command was used for this replacement. The upgrade restored an EAS Update immediately, so an embedded first launch after that replacement is not claimed.
 
 ## Earlier direct installation from the app
 

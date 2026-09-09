@@ -6,11 +6,11 @@ This version targets iOS. The picker runs in UIKit, outside the React bundle, an
 
 ## How drafts work
 
-Each PR publishes to a channel such as `draft-pr-42`. The picker shows the preview name and PR number, with a checkmark on the current update. Manually named previews show their channel as the subtitle. A catalog generated in CI contains the commit, platform update IDs, and runtime versions. Expo credentials stay in CI.
+Each PR publishes to an EAS channel such as `draft-pr-42`. Sign in to Expo in the native picker to browse updates and builds directly from EAS. Update messages provide the preview names, and channels identify separate drafts. The app reads exact update IDs, source commits, and native runtimes from EAS rather than a GitHub JSON index. Your Expo session is stored in the iOS Keychain; no publishing token is bundled with the app.
 
 The picker uses standard UIKit inset grouped rows, search, a Done button, and pull to refresh. It follows the system's light or dark appearance. Its draggable floating button uses the system glass style on iOS 26 and later, with a tinted button on earlier versions.
 
-Only the latest publication on each channel is listed. Publishing again updates that entry. For separate named experiments, use distinct channels such as `draft-search-redesign` or `draft-checkout-agent-a`.
+Only the latest iOS publication on each channel is listed. Publishing again updates that entry. For separate named experiments, use distinct channels such as `draft-search-redesign` or `draft-checkout-agent-a`.
 
 A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible and open native build actions when tapped. The picker offers a verified compatible build, shows a queued or running build, or opens **Request Build** on GitHub. See [native build setup](docs/native-builds.md). The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
 
@@ -38,8 +38,6 @@ export default {
     extra: { eas: { projectId: 'YOUR_EAS_PROJECT_UUID' } },
     plugins: [
       ['expo-drafts', {
-        catalogUrl: 'https://api.github.com/repos/OWNER/REPO/contents/catalog.json?ref=drafts-catalog',
-        buildsCatalogUrl: 'https://api.github.com/repos/OWNER/REPO/contents/build-catalog.json?ref=drafts-catalog',
         buildRequestUrl: 'https://github.com/OWNER/REPO/issues/new',
         buildProfile: 'drafts-device',
         buildUrl: 'https://expo.dev/accounts/OWNER/projects/SLUG/builds',
@@ -50,7 +48,7 @@ export default {
 };
 ```
 
-The plugin configures EAS Update, an embedded channel header, manual update checks, and native picker settings. It preserves other custom request headers and refuses a mismatched EAS project or disabled update recovery.
+The plugin configures EAS Update, an embedded channel header, manual update checks, the Expo sign-in callback scheme, and native picker settings. No catalog URL or hosted backend is needed. It preserves other custom request headers and refuses a mismatched EAS project or disabled update recovery.
 
 Create an internal release build for expo-drafts. Its native picker requires Release mode and is unavailable in Expo Go:
 
@@ -73,7 +71,7 @@ eas build --profile drafts --platform ios
 npx expo run:ios --configuration Release --no-bundler
 ```
 
-The floating button appears automatically. No React provider, screen, or JavaScript initialization is required. To open it from your app:
+The floating button appears automatically. Tap **Sign in to Expo** and choose an account with access to this EAS project. The browser handles authentication; expo-drafts never asks for your password. The account button lets you sign out, clearing the saved session and in-memory lists. No React provider, screen, or JavaScript initialization is required. To open it from your app:
 
 ```ts
 import { openDrafts, setDraftsVisible, getDraftsState } from 'expo-drafts';
@@ -95,15 +93,15 @@ Tap an incompatible draft to see its native build actions. A finished build with
 
 After the installer opens, **Installation requested** remains at the top of the picker with an activity indicator and the Home Screen instruction. This records the request, not download progress or confirmation that installation succeeded. Tap it to retry or hide the status if you canceled the iOS prompt. It survives reopening the picker and app, clears when the native runtime changes, and expires after 15 minutes.
 
-Build requests require repository write access. Trusted GitHub Actions code validates the request against the current draft catalog and the PR's source commit before dispatching EAS Workflows. The EAS workflow reuses an existing matching internal device build, or creates one. Only a completed build with verified project, runtime, profile, and device distribution metadata gets an install link. Expo and Apple credentials remain in GitHub/EAS.
+Build requests require repository write access. Trusted GitHub Actions code validates the request against the current EAS channel update and the PR's source commit before dispatching EAS Workflows. The EAS workflow reuses an existing matching internal device build, or creates one. Only a completed build with verified project, runtime, profile, and device distribution metadata gets an install link. Publishing and signing credentials remain in GitHub/EAS.
 
 Your iPhone must be included in the build's ad hoc provisioning profile. Installation requires the system installation flow and replaces the app's native binary. Reopen the app afterward; only updates matching that build's runtime will be selectable. TestFlight is not required.
 
-The build catalog and request URL are optional. Existing update selection works without them. See [native build setup](docs/native-builds.md) for signing, workflows, and integration in another repository.
+Build discovery uses EAS directly. The GitHub build request URL is optional; existing build installation and update selection work without it. See [native build setup](docs/native-builds.md) for signing, workflows, and integration in another repository.
 
 ## Publish from PRs
 
-See [the workflow guide](docs/workflow.md), the [GitHub dispatcher](.github/workflows/drafts.yml), and the [EAS workflow](example/.eas/workflows/publish-draft.yml). Each same-repository PR uploads its exact source commit to EAS Workflows, which publishes the iOS update to `draft-pr-N`. GitHub then merges the catalog using Git push retries so parallel PRs do not overwrite each other. Fork PRs do not receive Expo credentials.
+See [the workflow guide](docs/workflow.md), the [GitHub dispatcher](.github/workflows/drafts.yml), and the [EAS workflow](example/.eas/workflows/publish-draft.yml). Each same-repository PR uploads its exact source commit to EAS Workflows, which publishes the iOS update to `draft-pr-N`. Each update message includes the PR title, and the picker discovers the publication directly from EAS. GitHub does not publish or serve a catalog. Fork PRs do not receive Expo credentials.
 
 For a manual publication:
 
@@ -111,19 +109,17 @@ For a manual publication:
 eas update --platform ios --channel draft-search --message 'Search redesign' \
   --environment preview --non-interactive --json > eas-update.json
 
-npx expo-drafts catalog \
-  --input eas-update.json --output catalog.json \
-  --project-id YOUR_EAS_PROJECT_UUID \
-  --channel draft-search --name 'Search redesign'
 ```
 
-Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to retain other channels. The catalog contains preview names, commit IDs, runtime versions, and update IDs. For private project metadata, serve it through your own access-controlled endpoint and add an authentication integration before use. The included GitHub catalog is public. GitHub limits anonymous API requests per IP; use your own HTTPS endpoint for larger testing teams.
+Refresh the picker after publishing. EAS enforces your Expo account's project permissions. A successful list stays available in memory while later requests refresh it; signing out or losing project access clears it. Unsupported channel rollouts are reported explicitly rather than choosing an arbitrary branch.
+
+For existing integrations, an explicitly configured `catalogUrl` still enables the optional custom HTTPS catalog mode, and `buildsCatalogUrl` supplies its build metadata. The legacy catalog export CLIs remain available for that mode. Drafts Lab and the included workflows use direct EAS discovery.
 
 ## Test app
 
-`example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker uses this repository's catalog. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
+`example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker reads EAS directly after Expo sign-in. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
 
-PRs #1 through #4 share one native runtime. PR #5 changes `ios.supportsTablet` to `false` and requires a different native build, providing a real native upgrade to try from the picker. The original manual Amber, Ocean, and Camera entries remain in the catalog with earlier runtimes. See the [validation record](docs/ios-validation.md) for the current builds, exact update IDs, and completed checks.
+PRs #1 through #4 share one native runtime. PR #5 changes `ios.supportsTablet` to `false` and requires a different native build, providing a real native upgrade to try from the picker. The original manual channels remain in EAS with earlier runtimes. See the [validation record](docs/ios-validation.md) for the current builds, exact update IDs, and completed checks.
 
 ```sh
 npm ci
@@ -164,7 +160,7 @@ The iOS cache adapter uses Expo SDK 57's `updates` and `json_data` schema throug
 
 The same app installation shares its local data across drafts. Keep database migrations and persisted state compatible across the PRs you switch between. Switching EAS Updates changes JavaScript and assets. Installing a compatible build replaces the native binary.
 
-Creating a GitHub build request can consume EAS build minutes. Opening the request page alone starts no build. Closed PR cleanup and access-controlled catalog authentication are not implemented in this first version.
+Creating a GitHub build request can consume EAS build minutes. Opening the request page alone starts no build. Closing a PR does not delete its EAS channel. Direct discovery uses your Expo account permissions; custom catalog authentication remains the responsibility of that integration.
 
 The design follows Expo's [channel surfing](https://docs.expo.dev/eas-update/channel-surfing/), [runtime compatibility](https://docs.expo.dev/eas-update/runtime-versions/), and [error recovery](https://docs.expo.dev/eas-update/error-recovery/) behavior. Native implementation references were inspected in the local Expo repository.
 
