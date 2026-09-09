@@ -52,7 +52,7 @@ export default {
 
 The plugin configures EAS Update, an embedded channel header, manual update checks, and native picker settings. It preserves other custom request headers and refuses a mismatched EAS project or disabled update recovery.
 
-Create an internal release build. A development build or Expo Go cannot load these updates:
+Create an internal release build for expo-drafts. Its native picker requires Release mode and is unavailable in Expo Go:
 
 ```json
 {
@@ -117,7 +117,7 @@ Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to 
 
 `example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker uses this repository's catalog. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
 
-The native build actions in commit `6648eee` use runtime `bd60359c5e450058d8f98dbde40e5beefb68fe2e`. PRs #1 through #4 have been republished through EAS Workflows for that runtime. PR #5 changes `ios.supportsTablet` to `false`, producing runtime `d9c89e22141f261165d3e46ae7268a3453a1e839` and a real native mismatch for the build request flow. The original manual Amber, Ocean, and Camera experiment entries remain in the catalog and require different builds. See the [validation record](docs/ios-validation.md#current-native-build-actions-and-publications) for exact update IDs, source commits, and completed checks.
+Direct installation uses native runtime `166ee8786683217e3c8d06b3e8b322e68f80e17d`. PRs #1 through #4 have been republished through EAS Workflows for that runtime. PR #5 changes `ios.supportsTablet` to `false` and uses runtime `b585b87f336c7d3a807921c6c6e80795b9fdd2e0`, providing a real native upgrade to try from the picker. The original manual Amber, Ocean, and Camera entries remain in the catalog with earlier runtimes. See the [validation record](docs/ios-validation.md#direct-installation-from-the-app) for exact update IDs and completed checks.
 
 ```sh
 npm ci
@@ -156,7 +156,7 @@ Channel switching keeps Expo's embedded fallback and anti-bricking measures enab
 
 The iOS cache adapter uses Expo SDK 57's `updates` and `json_data` schema through public `UpdatesDatabase` APIs. Review it when upgrading the SDK. The picker serializes its own switches; app code must not start another `expo-updates` download or reload during a switch.
 
-The same app installation shares its local data across drafts. Keep database migrations and persisted state compatible across the PRs you switch between. The picker changes JavaScript and assets, not native code.
+The same app installation shares its local data across drafts. Keep database migrations and persisted state compatible across the PRs you switch between. Switching EAS Updates changes JavaScript and assets. Installing a compatible build replaces the native binary.
 
 Creating a GitHub build request can consume EAS build minutes. Opening the request page alone starts no build. Closed PR cleanup and access-controlled catalog authentication are not implemented in this first version.
 

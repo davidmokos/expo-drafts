@@ -70,7 +70,7 @@ https://api.expo.dev/v2/projects/{projectId}/builds/{buildId}/manifest.plist
 
 This is the endpoint used by EAS CLI for internal iOS installation. The app validates the manifest, then opens an `itms-services` URL through UIKit. The catalog retains the stable build identity. It does not store the manifest's temporary signed IPA URL.
 
-The system installer requires a physical iPhone. The simulator can test URL and manifest validation, but cannot install a device IPA. The app can confirm that iOS accepted the handoff, not whether the user confirmed or the installation completed.
+The system installer requires a registered physical iPhone or iPad supported by the build. Foundation tests cover URL and manifest validation; the simulator's install action displays a device-only message before requesting a manifest. The app can confirm that iOS accepted the handoff, not whether the user confirmed or the installation completed.
 
 ## Verification and failure handling
 
