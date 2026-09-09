@@ -10,6 +10,10 @@ swiftc ios/ExpoDraftsCatalog.swift ios/ExpoDraftsBuildCatalog.swift tests/ios/bu
 "$test_dir/build-catalog-tests" "$test_dir/build-request-fixture.json"
 swiftc ios/ExpoDraftsCatalog.swift ios/ExpoDraftsBuildCatalog.swift ios/ExpoDraftsBuildInstallation.swift tests/ios/build-installation-tests.swift -o "$test_dir/build-installation-tests"
 "$test_dir/build-installation-tests"
+swiftc ios/ExpoDraftsInstallationState.swift tests/ios/installation-state-tests.swift -o "$test_dir/installation-state-tests"
+"$test_dir/installation-state-tests"
+swiftc ios/ExpoDraftsCatalog.swift ios/ExpoDraftsBundleIdentity.swift tests/ios/bundle-identity-tests.swift -o "$test_dir/bundle-identity-tests"
+"$test_dir/bundle-identity-tests"
 node --input-type=module - "$test_dir/build-request-fixture.json" <<'NODE'
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
