@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 import {
@@ -83,7 +84,7 @@ test('native workflow rejects simulator, store, wrong profile/runtime, and spoof
     { profile: 'production' },
     { distribution: 'store' },
     { simulator: 'true' },
-    { simulator: undefined },
+    { simulator: 'unknown' },
     { build_id: 'invalid' },
     { git_commit_hash: 'a'.repeat(40) },
   ]) {
@@ -154,6 +155,50 @@ test('a fresh build requires the requested commit while an exact-runtime older b
       ),
     /requested runtimeVersion/
   );
+});
+
+test('real device BUILD outputs may omit simulator, but ready still requires explicit device metadata', async () => {
+  const fixture = JSON.parse(
+    await readFile(new URL('./fixtures/native-device-build.json', import.meta.url), 'utf8')
+  );
+  for (const simulator of [undefined, null]) {
+    const actualRun = {
+      ...run,
+      id: fixture.expected.runId,
+      inputs: {
+        runtime_version: fixture.expected.runtimeVersion,
+        git_commit: fixture.expected.gitCommitHash,
+        request_id: fixture.expected.requestId,
+      },
+      jobs: [{ ...run.jobs[0], outputs: { ...fixture.outputs, simulator } }],
+    };
+    const built = buildFromWorkflow(actualRun, fixture.expected);
+    const verification = {
+      ...fixture.expected,
+      expectedBuildId: built.id,
+      expectedBuildCommit: fixture.expected.gitCommitHash,
+    };
+    assert.equal(buildCatalogFromEasBuild(fixture.metadata, verification).builds[0].state, 'ready');
+    for (const isForIosSimulator of [undefined, null, true]) {
+      assert.throws(
+        () => buildCatalogFromEasBuild({ ...fixture.metadata, isForIosSimulator }, verification),
+        /physical device/
+      );
+    }
+    assert.throws(
+      () =>
+        buildCatalogFromEasBuild({ ...fixture.metadata, runtimeVersion: 'wrong' }, verification),
+      /requested runtimeVersion/
+    );
+    assert.throws(
+      () =>
+        buildCatalogFromEasBuild(
+          { ...fixture.metadata, gitCommitHash: 'a'.repeat(40) },
+          verification
+        ),
+      /expected build commit/
+    );
+  }
 });
 
 test('native waiter retries transient observations of the same run and reports state transitions', async () => {

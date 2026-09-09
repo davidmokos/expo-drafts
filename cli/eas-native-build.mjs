@@ -29,7 +29,9 @@ export function buildFromWorkflow(run, expected) {
   if (job?.type !== (created ? 'BUILD' : 'GET_BUILD') ||
     !UUID.test(output?.build_id ?? '') || output.runtime_version !== expected.runtimeVersion ||
     output.platform !== 'ios' || output.profile !== expected.profile || output.distribution !== 'internal' ||
-    ![false, 'false'].includes(output.simulator) ||
+    // Device BUILD jobs can omit this hint or return null. The subsequent
+    // build:view validation requires isForIosSimulator === false before ready.
+    (output.simulator != null && ![false, 'false'].includes(output.simulator)) ||
     (created && output.git_commit_hash !== expected.gitCommitHash)) {
     throw new Error('EAS returned a build that does not match the requested iPhone runtime and profile.');
   }
