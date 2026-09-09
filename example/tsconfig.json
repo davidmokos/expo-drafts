@@ -4,7 +4,8 @@
     "strict": true,
     "paths": {
       "expo-drafts": ["../src/index"],
-      "expo-drafts/*": ["../src/*"]
+      "expo-drafts/*": ["../src/*"],
+      "@/*": ["./src/*"]
     }
   }
 }
