@@ -1,0 +1,53 @@
+name: Build a compatible iPhone preview
+run_name: Native preview / ${{ inputs.runtime_version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      runtime_version:
+        type: string
+        required: true
+      git_commit:
+        type: string
+        required: true
+      request_id:
+        type: string
+        required: true
+      refresh_ad_hoc_provisioning_profile:
+        type: boolean
+        default: true
+
+# GitHub serializes native requests by verified runtime before this lookup.
+# EAS custom concurrency groups are not enforced; keep any EAS build alive.
+concurrency:
+  group: draft-native-${{ inputs.runtime_version }}
+  cancel_in_progress: false
+
+defaults:
+  image: sdk-57
+  tools:
+    node: '24.11.1'
+
+jobs:
+  existing_build:
+    name: Find a compatible iPhone build
+    type: get-build
+    params:
+      platform: ios
+      profile: drafts-device
+      distribution: internal
+      app_identifier: com.example.app # Replace with your ios.bundleIdentifier.
+      runtime_version: ${{ inputs.runtime_version }}
+      simulator: false
+      wait_for_in_progress: true
+
+  native_build:
+    name: Build the requested native runtime
+    needs: [existing_build]
+    if: ${{ !needs.existing_build.outputs.build_id }}
+    type: build
+    params:
+      platform: ios
+      profile: drafts-device
+      message: Draft native runtime ${{ inputs.runtime_version }}
+      refresh_ad_hoc_provisioning_profile: ${{ inputs.refresh_ad_hoc_provisioning_profile }}

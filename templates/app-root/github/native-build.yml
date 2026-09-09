@@ -1,0 +1,143 @@
+name: Build requested iPhone preview
+
+on:
+  workflow_run:
+    workflows: [Publish PR draft]
+    types: [completed]
+  issues:
+    types: [opened, reopened]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: EAS channel for the published preview
+        required: true
+      update_id:
+        description: Exact iOS update ID
+        required: true
+      runtime_version:
+        description: Exact native runtime required by the update
+        required: true
+      refresh_ad_hoc_provisioning_profile:
+        description: Refresh Apple device provisioning; disable only to reuse an existing valid profile
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: read
+  actions: read
+
+jobs:
+  validate:
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'pull_request' &&
+       github.event.workflow_run.head_repository.full_name == github.repository) ||
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.event.issue.title, 'Build draft:')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      should_build: ${{ steps.request.outputs.should_build }}
+      git_commit: ${{ steps.request.outputs.git_commit }}
+      runtime: ${{ steps.request.outputs.runtime }}
+      concurrency_key: ${{ steps.request.outputs.concurrency_key }}
+      refresh_profile: ${{ steps.request.outputs.refresh_profile }}
+    env:
+      DRAFT_PROJECT_ID: ${{ vars.DRAFT_PROJECT_ID }}
+    steps:
+      - name: Check out trusted build tools
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: control
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install pinned trusted CLI helpers
+        run: npm install --prefix tooling --ignore-scripts --legacy-peer-deps --no-audit --no-fund --package-lock=false --save-exact expo-drafts@0.1.0
+      - name: Validate requester and published preview
+        id: request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          mkdir -p work
+          node tooling/node_modules/expo-drafts/cli/build-request.mjs --project-id "$DRAFT_PROJECT_ID" --output work/request.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ steps.request.outputs.should_build == 'true' }}
+        with:
+          name: validated-native-build-request
+          path: work/request.json
+          if-no-files-found: error
+
+  build:
+    needs: [validate]
+    if: ${{ needs.validate.outputs.should_build == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 145
+    env:
+      DRAFTS_ENABLED: '1'
+    # Serialize the lookup/create decision across PRs and manual requests.
+    # A new JS publication never cancels a running native build for its runtime.
+    concurrency:
+      group: ${{ needs.validate.outputs.concurrency_key }}
+      cancel-in-progress: false
+    steps:
+      - name: Check out trusted build tools
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: control
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: validated-native-build-request
+          path: work
+      - name: Check out verified preview source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.validate.outputs.git_commit }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Install source dependencies
+        run: npm ci
+        working-directory: source
+      - name: Install pinned trusted CLI helpers
+        run: npm install --prefix tooling --ignore-scripts --legacy-peer-deps --no-audit --no-fund --package-lock=false --save-exact expo-drafts@0.1.0
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: 23.2.0
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify native runtime and use trusted EAS workflow
+        env:
+          EXPECTED_RUNTIME: ${{ needs.validate.outputs.runtime }}
+          EXPECTED_COMMIT: ${{ needs.validate.outputs.git_commit }}
+        working-directory: source
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_COMMIT"
+          mkdir -p .eas/workflows
+          cp ../control/.eas/workflows/build-draft.yml .eas/workflows/build-draft.yml
+          npx expo-updates runtimeversion:resolve --platform ios > ../work/runtime.json
+          node ../tooling/node_modules/expo-drafts/cli/verify-build-runtime.mjs ../work/runtime.json "$EXPECTED_RUNTIME"
+      - name: Dispatch EAS native build workflow
+        env:
+          DRAFT_REFRESH_AD_HOC_PROVISIONING_PROFILE: ${{ needs.validate.outputs.refresh_profile }}
+        working-directory: source
+        run: node ../tooling/node_modules/expo-drafts/cli/dispatch-native-build.mjs ../work/request.json ../work/eas-native-workflow.json
+      - name: Await and verify the EAS artifact
+        run: node tooling/node_modules/expo-drafts/cli/eas-native-build.mjs wait --request work/request.json --run-file work/eas-native-workflow.json --no-publish --project-directory source --output work/ready-build.json
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: native-build-request
+          path: |
+            work/request.json
+            work/runtime.json
+            work/eas-native-workflow.json
+            work/ready-build.json

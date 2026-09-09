@@ -1,0 +1,119 @@
+name: Publish PR draft
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: EAS channel for this draft
+        default: draft-manual
+        required: true
+      name:
+        description: Name shown in the app
+        default: Manual draft
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: drafts-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  update:
+    name: Publish with EAS Workflows
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    env:
+      DRAFT_PROJECT_ID: ${{ vars.DRAFT_PROJECT_ID }}
+      DRAFTS_ENABLED: '1'
+      DRAFT_CHANNEL: ${{ github.event_name == 'pull_request' && format('draft-pr-{0}', github.event.pull_request.number) || inputs.channel }}
+      DRAFT_NAME: ${{ github.event.pull_request.title || inputs.name }}
+      DRAFT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      DRAFT_PR_NUMBER: ${{ github.event.pull_request.number }}
+      DRAFT_PR_URL: ${{ github.event.pull_request.html_url }}
+    steps:
+      - name: Check Expo authentication
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo 'Add an EXPO_TOKEN repository secret to enable EAS Workflows.' >&2
+            exit 1
+          fi
+      - name: Check out the PR source
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: source
+          persist-credentials: false
+      - name: Check out trusted workflow tools
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: control
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: source/package-lock.json
+      # Dependencies let EAS CLI resolve app config before uploading the source.
+      # JavaScript bundling and EAS Update publication happen on EAS workers.
+      - run: npm ci
+        working-directory: source
+      - name: Install pinned trusted CLI helpers
+        run: npm install --prefix tooling --ignore-scripts --legacy-peer-deps --no-audit --no-fund --package-lock=false --save-exact expo-drafts@0.1.0
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: 23.2.0
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Dispatch the EAS workflow
+        working-directory: source
+        env:
+          DRAFT_GITHUB_RUN_ID: ${{ github.run_id }}
+        run: |
+          mkdir -p ../work .eas/workflows
+          test "$(git rev-parse HEAD)" = "$DRAFT_HEAD_SHA"
+          cp ../control/.eas/workflows/publish-draft.yml .eas/workflows/publish-draft.yml
+          npx expo config --json > ../work/app-config.json
+          node -e 'const c=require("../work/app-config.json"); if (!process.env.DRAFT_PROJECT_ID || c.extra?.eas?.projectId !== process.env.DRAFT_PROJECT_ID) throw Error("DRAFT_PROJECT_ID must match extra.eas.projectId")'
+          eas workflow:run .eas/workflows/publish-draft.yml --non-interactive --json \
+            --input "channel=$DRAFT_CHANNEL" --input "name=$DRAFT_NAME" \
+            --input "git_commit=$DRAFT_HEAD_SHA" --input "github_run_id=$DRAFT_GITHUB_RUN_ID" \
+            > ../work/eas-workflow.json
+      - name: Wait for publication on EAS
+        run: |
+          node tooling/node_modules/expo-drafts/cli/eas-workflow.mjs wait --run-file work/eas-workflow.json \
+            --output work/eas-update.json --project-id "$DRAFT_PROJECT_ID" \
+            --channel "$DRAFT_CHANNEL" --git-commit "$DRAFT_HEAD_SHA"
+      - name: Cancel interrupted EAS publication
+        if: ${{ cancelled() }}
+        run: |
+          node tooling/node_modules/expo-drafts/cli/eas-workflow.mjs cancel --run-file work/eas-workflow.json \
+            --project-id "$DRAFT_PROJECT_ID" --channel "$DRAFT_CHANNEL" --git-commit "$DRAFT_HEAD_SHA"
+      - name: Save verified publication report
+        shell: bash
+        env:
+          DRAFT_BUILD_URL: ${{ vars.DRAFT_BUILD_URL }}
+        run: |
+          args=(--input work/eas-update.json --output work/draft.json --project-id "$DRAFT_PROJECT_ID" --channel "$DRAFT_CHANNEL" --name "$DRAFT_NAME")
+          if [ -n "$DRAFT_PR_NUMBER" ]; then
+            args+=(--pr-number "$DRAFT_PR_NUMBER" --pr-url "$DRAFT_PR_URL")
+          fi
+          if [ -n "$DRAFT_BUILD_URL" ]; then
+            args+=(--build-url "$DRAFT_BUILD_URL")
+          fi
+          node tooling/node_modules/expo-drafts/cli/index.mjs catalog "${args[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: draft-catalog-entry
+          path: |
+            work/draft.json
+            work/eas-workflow.json
+          if-no-files-found: error
