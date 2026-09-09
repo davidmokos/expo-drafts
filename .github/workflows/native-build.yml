@@ -14,6 +14,10 @@ on:
       runtime_version:
         description: Exact native runtime required by the update
         required: true
+      refresh_ad_hoc_provisioning_profile:
+        description: Refresh Apple device provisioning; disable only to reuse an existing valid profile
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -74,6 +78,8 @@ jobs:
           npx expo-updates runtimeversion:resolve --platform ios > ../../work/runtime.json
           node ../../control/cli/verify-build-runtime.mjs ../../work/runtime.json "$EXPECTED_RUNTIME"
       - name: Dispatch EAS native build workflow
+        env:
+          DRAFT_REFRESH_AD_HOC_PROVISIONING_PROFILE: ${{ github.event_name != 'workflow_dispatch' || inputs.refresh_ad_hoc_provisioning_profile }}
         working-directory: source/example
         run: node ../../control/cli/dispatch-native-build.mjs ../../work/request.json ../../work/eas-native-workflow.json
       - name: Await and verify the EAS artifact

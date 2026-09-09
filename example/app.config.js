@@ -3,6 +3,8 @@ module.exports = ({ config }) => ({
   // Native changes automatically produce a different compatible runtime.
   runtimeVersion: process.env.DRAFTS_TEST_RUNTIME || { policy: 'fingerprint' },
   plugins: [
+    'expo-router',
+    'expo-splash-screen',
     [
       '../app.plugin.js',
       {
