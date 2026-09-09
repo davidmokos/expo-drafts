@@ -60,7 +60,9 @@ Set `extra.eas.projectId` to the EAS project UUID. Each reviewer signs in to Exp
 
 Register each test device with `eas device:create`, then configure the internal profile's signing credentials with `eas credentials:configure-build --platform ios --profile drafts-device`. Use remote credentials for the supplied workflow. A device must be included in the actual provisioning profile, not just recorded in the EAS device list.
 
-The example enables `refresh_ad_hoc_provisioning_profile: true`. This requires an App Store Connect API key assigned to the app for EAS to refresh its managed profile without an interactive Apple sign-in. Existing valid signing artifacts can be reused. See [Expo's internal distribution and CI requirements](https://docs.expo.dev/build/internal-distribution/).
+The example defaults to `refresh_ad_hoc_provisioning_profile: true`. This requires an App Store Connect API key assigned to the app for EAS to refresh its managed profile without an interactive Apple sign-in. Issue-triggered requests always use this default. See [Expo's internal distribution and CI requirements](https://docs.expo.dev/build/internal-distribution/).
+
+For a manual **Build requested iPhone preview** run, you can disable **refresh_ad_hoc_provisioning_profile** to reuse the existing EAS-managed profile. Use this only after checking that the profile and signing certificate remain valid, match the bundle identifier, and already include the intended devices. This avoids forced Apple profile refresh when Apple's service is unavailable. It does not add newly registered devices or repair expired or revoked credentials. Source, runtime, and finished-artifact verification still apply.
 
 The app hands a verified EAS installation manifest to iOS using `itms-services`. iOS downloads and installs the signed app after confirmation. Reopen the app after installation and select the draft. TestFlight is not required for this ad hoc workflow.
 

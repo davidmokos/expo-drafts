@@ -1,10 +1,61 @@
 # iOS validation, September 8 and 9, 2026
 
-This record separates the current bundled-version action from tests of earlier runtime revisions. Local simulator validation uses an iPhone 17 Pro Max running iOS 26.3. Native apps are compiled in Release mode with Xcode, and EAS hosts the remote updates.
+This record covers direct EAS discovery and preserves validation results for earlier runtime revisions. Local simulator validation uses an iPhone 17 Pro Max running iOS 26.3. Native apps are compiled in Release mode with Xcode, and EAS hosts the remote updates.
 
 The app uses Expo SDK 57, React Native 0.86.3, and expo-updates 57.0.21. Its EAS project is [@mokosdavid/expo-drafts-lab](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab), and its bundle identifier is `dev.davidmokos.draftslab`.
 
-## Return to the bundled version
+## Direct EAS discovery
+
+Commit [`1e4c6f8`](https://github.com/davidmokos/expo-drafts/commit/1e4c6f87664948b58d959659aeda845b15d61a6e) replaces the example app's GitHub catalog with authenticated EAS discovery. The native picker reads channel names, latest iOS publications, exact update IDs, source commits, and runtimes from EAS GraphQL. Device builds come from the same authenticated API. GitHub remains the optional build-request dispatcher and PR publication trigger.
+
+Expo sign-in uses the system authentication browser and a project-specific callback with a random nonce. The app verifies the returned session with EAS before storing it in Keychain. No publishing token is embedded in the binary. Sign-out cancels pending requests and clears the session and lists; losing project access clears project data without treating a valid Expo login as expired.
+
+The shared runtime is `fe37c66b8936ffb353b2bee9cf9180cb0f658c9b`. PR #5 preserves its iPhone-only native configuration and uses `cdbb38c4fa4a439071aa563f771bea853e934371`.
+
+All 41 Node tests, TypeScript builds, lint, and example typecheck passed for the discovery implementation. The manual profile-refresh option added one test, bringing the passing total to 42. All native suites passed, including eight new EAS discovery groups covering channel routing, incompatible runtimes, build identity and expiry, pagination, request cancellation, transport limits, authentication errors, and shared Retry-After backoff. [GitHub checks](https://github.com/davidmokos/expo-drafts/actions/runs/34379123369) passed for the implementation commit.
+
+A standalone invocation of the actual Swift client authenticated with the existing local Expo session and returned all eight published previews and eight device builds. The latest five PR update identities and both previous verified device archives matched EAS metadata. This check preceded the publications listed below.
+
+### Simulator checks
+
+The Release simulator app opened the official Expo sign-in page in the system browser. Cancel restored the native Sign in row without an error. Authenticated UI testing used the existing local Expo session inserted into only this simulator app's Keychain with LLDB. This verifies authenticated discovery and session persistence; it does not claim completion of a real browser login callback.
+
+The simulator build embeds UUID `9b184ebc-0876-4ab8-8080-6b63bd59fd9a`. The signed-in picker listed all eight channels, showed compatible PRs #1–4, and kept PR #5 visibly incompatible. It launched PR #1 update `01a08715-b9cb-71af-aea1-ee6a47ac03c8`. **Run bundled version** returned to the exact embedded UUID and remained selected after a cold restart. The saved Expo session also survived that restart. The picker then launched Reading List update `01a08718-5b55-7c67-8e8b-055a9fad478d`, and Running showed that exact ID and native runtime.
+
+The account button's **Sign Out** cleared the draft rows while preserving the truthful Running section. Another cold restart remained signed out. The session was restored through the same local QA fixture for the remaining update and build-discovery checks.
+
+Local build infrastructure required two QA-only repairs. Maven's local edge refused React Native 0.86.3 artifacts, so CocoaPods used cached Release archives whose SHA-256 hashes matched the official Maven metadata. Simulator Keychain access required simulated entitlements embedded by a relink of the existing app objects. Neither repair changed package source, runtime inputs, or bundled resources. A dependency check verified every nested Mach-O load; a temporary copy with React.framework removed correctly failed on the missing dependency.
+
+The shared build's first two attempts failed before native compilation because Apple returned an Internal Server Error during forced profile refresh. Commit [`6a4f562`](https://github.com/davidmokos/expo-drafts/commit/6a4f5628256aa474c16d99c28c4e0a897141bacc) adds a manual option to reuse existing profiles, while preserving automatic refresh by default and for issue requests. The assigned EAS ad hoc profile was active, matched the previous successful archive, included the target phone, and was valid through July 3, 2027. This workflow change does not alter the native runtime.
+
+### Publications for EAS discovery
+
+All five PR publication workflows and package checks passed. Authenticated EAS reads verified each latest iOS update against the publication report, exact PR head, channel mapping, and successful EAS workflow. No GitHub catalog was written or read by the app.
+
+| Preview | Channel | Source | iOS update ID | Successful CI |
+| --- | --- | --- | --- | --- |
+| [PR #1](https://github.com/davidmokos/expo-drafts/pull/1) | `draft-pr-1` | [`ee5dd0d`](https://github.com/davidmokos/expo-drafts/commit/ee5dd0d01bf00d93ff574b3bc4109d63abd0a2c9) | `01a08715-b9cb-71af-aea1-ee6a47ac03c8` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08714-7e91-7b47-968a-47e31ee4f245) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34379188397) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34379188559) |
+| [PR #2](https://github.com/davidmokos/expo-drafts/pull/2) | `draft-pr-2` | [`bbcec14`](https://github.com/davidmokos/expo-drafts/commit/bbcec144e6b761d83726ba168b738d7af133ec32) | `01a08718-5b55-7c67-8e8b-055a9fad478d` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08717-3f07-70a3-afa2-b22c95606dfb) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34379507173) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34379507151) |
+| [PR #3](https://github.com/davidmokos/expo-drafts/pull/3) | `draft-pr-3` | [`31b70ae`](https://github.com/davidmokos/expo-drafts/commit/31b70ae1f47be1bf6647b7cefcdb56d963bf3e72) | `01a08718-709e-7320-a181-353f51c5264a` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08717-4679-77ca-a2a9-f98a613deee4) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34379507080) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34379507057) |
+| [PR #4](https://github.com/davidmokos/expo-drafts/pull/4) | `draft-pr-4` | [`5d875cd`](https://github.com/davidmokos/expo-drafts/commit/5d875cd187ef65b68e4f86afff3801653c96dfd0) | `01a08718-7201-7c1f-9eb1-ce1cb3ba488a` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08717-4f6e-7ad2-b7fe-8693c097c3e4) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34379510662) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34379510807) |
+| [PR #5](https://github.com/davidmokos/expo-drafts/pull/5) | `draft-pr-5` | [`83f89e4`](https://github.com/davidmokos/expo-drafts/commit/83f89e4d55a82879b7ded338c710c9f498bd7735) | `01a08715-d906-77b2-aed1-3fc3955c2ca3` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08714-a103-712a-a512-3d261411940e) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34379197576) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34379197534) |
+
+### Verified device builds for EAS discovery
+
+Both EAS workflows and their final GitHub runs succeeded. The shared build reused the verified existing profile after the Apple failures; the iPhone-only build succeeded on its second normal attempt with profile refresh enabled. The final workflow option also passed [package checks](https://github.com/davidmokos/expo-drafts/actions/runs/34380963324).
+
+| Native build | Source | Embedded update | Successful CI |
+| --- | --- | --- | --- |
+| [Shared, PRs #1–4](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/adebb332-c1bb-44ad-9901-0546beb9ca77) | [`bbcec14`](https://github.com/davidmokos/expo-drafts/commit/bbcec144e6b761d83726ba168b738d7af133ec32) | `095600b8-7cd3-4860-a7c5-1fd6d82f1011` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08724-e130-7a23-a044-41b585d0606f) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34381012813) |
+| [iPhone only, PR #5](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/e64bf082-b9fa-49c6-bfa0-33f43f17570a) | [`83f89e4`](https://github.com/davidmokos/expo-drafts/commit/83f89e4d55a82879b7ded338c710c9f498bd7735) | `ea595220-cf91-4f11-bddb-acd3f8773c37` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08720-11b5-7013-9fb4-db4fa81644ad) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34379828921/attempts/2) |
+
+Both downloaded IPAs passed strict deep signature verification, include the registered phone, and embed the expected native fingerprints. The shared build supports iPhone and iPad; PR #5 supports iPhone only. Both have empty custom catalog URLs, the correct EAS project and registered Expo sign-in callback, and complete framework dependencies. Each archive contained nine Mach-O images and all 29 required dependencies within the app. Both use app version `1.0.0` and build number `1`.
+
+The simulator's native picker fetched the live iPhone-only build from EAS, showed **Build in progress**, and then changed to **Install compatible build** after it finished. The ready action correctly explained that device builds must be installed on a registered physical device. The temporary simulator Expo session was removed through Sign Out after validation.
+
+Physical installation of these new builds is pending. The phone was still disconnected when the archives were ready; its device tunnel was unavailable, with the last recorded connection at 15:44 UTC on September 9. No new archive was installed on the phone in this validation. The previously installed build continues to use the earlier GitHub discovery until replaced. The new build requires Expo sign-in in the picker; real browser authentication and switching on the physical phone remain to be verified.
+
+## Earlier return to the bundled version
 
 Commit [`ad23424`](https://github.com/davidmokos/expo-drafts/commit/ad234246f57dd0018655b971701ebb3f0fd568c0) adds **Run bundled version** below Running while a downloaded bundle is active. It restores the installed native build's original update headers, prepares the exact embedded UUID locally, and verifies the launched identity before committing. It does not require a catalog entry or a download. A failed selection restores the previous headers and cache metadata; an interrupted selection uses the existing startup recovery transaction.
 
