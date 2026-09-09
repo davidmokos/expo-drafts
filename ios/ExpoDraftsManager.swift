@@ -10,10 +10,20 @@ final class ExpoDraftsManager {
   private weak var picker: DraftsViewController?
   private(set) var switching = false
   private var catalogTask: URLSessionDataTask?
+  private var buildsCatalogTask: URLSessionDataTask?
+  private var buildsCatalogGeneration = UUID()
+  private(set) var buildsCatalog: DraftBuildCatalog?
+  private(set) var buildsCatalogLoading = false
+  private(set) var buildsCatalogError: String?
 
   var enabled: Bool { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsEnabled") as? Bool ?? false }
   var projectID: String { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsProjectID") as? String ?? "" }
   var buildURL: String? { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildURL") as? String }
+  var buildProfile: String { Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildProfile") as? String ?? "drafts-device" }
+  var buildRequestsConfigured: Bool {
+    let url = Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildRequestURL") as? String
+    return url?.isEmpty == false
+  }
 
   private var constants: [String: Any?] {
     guard AppController.isInitialized() else { return [:] }
@@ -121,6 +131,87 @@ final class ExpoDraftsManager {
       DispatchQueue.main.async { completion(result) }
     }
     catalogTask?.resume()
+  }
+
+  func build(for draft: DraftEntry) -> DraftBuildEntry? {
+    guard let update = draft.iosUpdate else { return nil }
+    return buildsCatalog?.build(runtimeVersion: update.runtimeVersion, platform: "ios", profile: buildProfile)
+  }
+
+  /// Build metadata is optional. A missing or unavailable catalog never changes whether
+  /// an EAS Update can run in the installed native build.
+  func fetchBuildCatalog(completion: @escaping () -> Void) {
+    buildsCatalogTask?.cancel()
+    buildsCatalogTask = nil
+    let generation = UUID()
+    buildsCatalogGeneration = generation
+    guard let rawURL = Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildsCatalogURL") as? String, !rawURL.isEmpty else {
+      buildsCatalogLoading = false
+      buildsCatalogError = nil
+      buildsCatalog = nil
+      completion()
+      return
+    }
+    guard let url = URL(string: rawURL), url.isDraftsSecureWebURL else {
+      buildsCatalogLoading = false
+      buildsCatalogError = "The build catalog URL must use HTTPS."
+      completion()
+      return
+    }
+    var requestURL = url
+    if ["api.github.com", "raw.githubusercontent.com"].contains(url.host?.lowercased() ?? ""),
+      var components = URLComponents(url: url, resolvingAgainstBaseURL: false) {
+      components.queryItems = (components.queryItems ?? []) + [URLQueryItem(name: "expo-drafts-refresh", value: UUID().uuidString)]
+      requestURL = components.url ?? url
+    }
+    var request = URLRequest(url: requestURL, cachePolicy: .reloadIgnoringLocalAndRemoteCacheData, timeoutInterval: 25)
+    request.setValue(url.host == "api.github.com" ? "application/vnd.github.raw+json" : "application/json", forHTTPHeaderField: "Accept")
+    let expectedProjectID = projectID
+    buildsCatalogLoading = true
+    buildsCatalogError = nil
+    buildsCatalogTask = URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+      if (error as NSError?)?.code == NSURLErrorCancelled { return }
+      let result: Result<DraftBuildCatalog, Error> = Result {
+        if let error { throw error }
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode), let data else {
+          throw DraftsError.message("Build status could not be loaded. Refresh to try again.")
+        }
+        guard http.url?.isDraftsSecureWebURL == true else {
+          throw DraftsError.message("The build catalog redirected to an insecure URL.")
+        }
+        return try DraftBuildCatalog.decode(data, projectID: expectedProjectID)
+      }
+      DispatchQueue.main.async {
+        guard let self, self.buildsCatalogGeneration == generation else { return }
+        self.buildsCatalogLoading = false
+        self.buildsCatalogTask = nil
+        switch result {
+        case .success(let catalog): self.buildsCatalog = catalog
+        case .failure(let error): self.buildsCatalogError = error.localizedDescription
+        }
+        completion()
+      }
+    }
+    buildsCatalogTask?.resume()
+  }
+
+  func buildRequestURL(for draft: DraftEntry) throws -> URL {
+    try DraftBuildRequest.url(
+      for: draft, projectID: projectID,
+      baseURL: Bundle.main.object(forInfoDictionaryKey: "ExpoDraftsBuildRequestURL") as? String
+    )
+  }
+
+  func openBuildActionURL(_ url: URL, completion: @escaping (Error?) -> Void) {
+    guard url.isDraftsSecureWebURL else {
+      completion(DraftsError.message("Build links must use HTTPS."))
+      return
+    }
+    UIApplication.shared.open(url, options: [:]) { success in
+      DispatchQueue.main.async {
+        completion(success ? nil : DraftsError.message("The browser could not open this build link."))
+      }
+    }
   }
 
   func compatibility(_ draft: DraftEntry) -> String? {

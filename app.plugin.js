@@ -23,6 +23,9 @@ function withExpoDrafts(config, options = {}) {
   const projectId = options.projectId || config.extra?.eas?.projectId;
   let catalogUrl = '';
   let buildUrl = '';
+  let buildsCatalogUrl = '';
+  let buildRequestUrl = '';
+  const buildProfile = options.buildProfile || 'drafts-device';
   if (enabled) {
     if (!/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/i.test(projectId || '')) {
       throw new Error('expo-drafts: provide projectId or run eas init first.');
@@ -32,6 +35,20 @@ function withExpoDrafts(config, options = {}) {
       options.buildUrl || `https://expo.dev/projects/${projectId}/builds`,
       'buildUrl'
     );
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(buildProfile)) {
+      throw new Error('expo-drafts: buildProfile must be an EAS build profile name.');
+    }
+    if (options.buildsCatalogUrl) {
+      buildsCatalogUrl = httpsURL(options.buildsCatalogUrl, 'buildsCatalogUrl');
+    }
+    if (options.buildRequestUrl) {
+      buildRequestUrl = httpsURL(options.buildRequestUrl, 'buildRequestUrl');
+      const request = new URL(buildRequestUrl);
+      if (request.hostname !== 'github.com' || request.port || request.search || request.hash ||
+        !/^\/[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+\/issues\/new$/.test(request.pathname)) {
+        throw new Error('expo-drafts: buildRequestUrl must be https://github.com/OWNER/REPO/issues/new without query parameters.');
+      }
+    }
     const updateUrl = `https://u.expo.dev/${projectId}`;
     if (config.updates?.url && config.updates.url.replace(/\/$/, '') !== updateUrl) {
       throw new Error('expo-drafts: updates.url must match the configured EAS project.');
@@ -61,6 +78,9 @@ function withExpoDrafts(config, options = {}) {
       ExpoDraftsProjectID: projectId || '',
       ExpoDraftsCatalogURL: catalogUrl,
       ExpoDraftsBuildURL: buildUrl,
+      ExpoDraftsBuildsCatalogURL: buildsCatalogUrl,
+      ExpoDraftsBuildRequestURL: buildRequestUrl,
+      ExpoDraftsBuildProfile: buildProfile,
     });
     return mod;
   });
