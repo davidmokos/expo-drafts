@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T15:24:57.258Z",
+  "generatedAt": "2026-09-09T15:29:57.342Z",
   "drafts": [
+    {
+      "id": "c8baf2b3-2e4e-4d89-89bf-2baa0c99c231",
+      "name": "[example] Reading list",
+      "channel": "draft-pr-2",
+      "branch": "draft-pr-2",
+      "message": "[example] Reading list",
+      "createdAt": "2026-09-09T15:29:38.400Z",
+      "gitCommitHash": "a46f4933bc1486d4685f8b18e2eeddc20f5efcdc",
+      "pullRequest": {
+        "number": 2,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/2"
+      },
+      "updates": [
+        {
+          "id": "01a086c9-f860-71cf-926a-7389ab3ae681",
+          "groupId": "c8baf2b3-2e4e-4d89-89bf-2baa0c99c231",
+          "platform": "ios",
+          "runtimeVersion": "8bc256182be4455e53cb429fb3771559e0ee5a7c"
+        }
+      ]
+    },
     {
       "id": "7276fb01-6c16-455e-a15d-24f8970ad578",
       "name": "[example] previews a pull request from GitHub Actions",
@@ -82,27 +103,6 @@
         {
           "id": "01a086c3-77c4-73a3-8a00-e77e4d5b62d7",
           "groupId": "12d0461e-b097-4f09-9659-93629a1b808d",
-          "platform": "ios",
-          "runtimeVersion": "dd91e77e18e222b089faec779acba7efc0c25182"
-        }
-      ]
-    },
-    {
-      "id": "0bd0c7b7-0d77-4679-b803-2dec86055ca9",
-      "name": "[example] Reading list",
-      "channel": "draft-pr-2",
-      "branch": "draft-pr-2",
-      "message": "[example] Reading list",
-      "createdAt": "2026-09-09T15:22:27.307Z",
-      "gitCommitHash": "547d0079897dc122a2e2be751c7d3fe78aa3a50d",
-      "pullRequest": {
-        "number": 2,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/2"
-      },
-      "updates": [
-        {
-          "id": "01a086c3-646b-794b-937e-f9c16601f278",
-          "groupId": "0bd0c7b7-0d77-4679-b803-2dec86055ca9",
           "platform": "ios",
           "runtimeVersion": "dd91e77e18e222b089faec779acba7efc0c25182"
         }
