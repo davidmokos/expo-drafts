@@ -199,7 +199,7 @@ enum DraftEASMapping {
       }
     }
     guard channelIDs.count <= 1000 else { throw DraftEASError.paginationLimit }
-    entries.sort { (date($0.createdAt) ?? .distantPast) > (date($1.createdAt) ?? .distantPast) }
+    entries = DraftEntry.newestFirst(entries)
     return DraftCatalog(schemaVersion: 1, projectId: try uuid(projectID), generatedAt: ISO8601DateFormatter().string(from: Date()), drafts: entries)
   }
 
@@ -279,11 +279,7 @@ enum DraftEASMapping {
     [40, 64].contains(text.count) && text.unicodeScalars.allSatisfy { CharacterSet(charactersIn: "0123456789abcdefABCDEF").contains($0) }
   }
   static func date(_ text: String) -> Date? {
-    let formatter = ISO8601DateFormatter()
-    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-    if let value = formatter.date(from: text) { return value }
-    formatter.formatOptions = [.withInternetDateTime]
-    return formatter.date(from: text)
+    DraftEntry.parsePublicationDate(text)
   }
 
   struct Response: Decodable { let data: Root?; let errors: [GraphQLError]? }
