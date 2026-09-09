@@ -12,7 +12,9 @@ The picker uses standard UIKit inset grouped rows, search, a Done button, and pu
 
 Only the latest iOS publication on each channel is listed, newest first. Each row shows its publication date and time in the device's local format and time zone. Publishing again updates that entry and its position. For separate named experiments, use distinct channels such as `draft-search-redesign` or `draft-checkout-agent-a`.
 
-A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible and open native build actions when tapped. The picker offers a verified compatible build, shows a queued or running build, or opens **Request Build** on GitHub. See [native build setup](docs/native-builds.md). The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
+A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible and open native build actions when tapped. The included PR workflow automatically reuses or creates a matching native build after publication. The picker offers a compatible build when ready and shows builds in progress; **Request Build** remains available as a manual fallback. See [native build setup](docs/native-builds.md). The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
+
+When installing a compatible build from the picker, it remembers the exact selected update. Reopen the app after iOS finishes installation and that update opens automatically. Interrupted attempts, network errors, or a changed publication show a native retry/cancel action.
 
 Selecting a draft changes the native `expo-channel-name` header, downloads the update, verifies its exact ID, and reloads. This also supports switching back to an older update on another channel. If the channel changed after the catalog loaded, the picker restores the previous channel and asks you to refresh.
 
