@@ -39,6 +39,9 @@ export default {
     plugins: [
       ['expo-drafts', {
         catalogUrl: 'https://api.github.com/repos/OWNER/REPO/contents/catalog.json?ref=drafts-catalog',
+        buildsCatalogUrl: 'https://api.github.com/repos/OWNER/REPO/contents/build-catalog.json?ref=drafts-catalog',
+        buildRequestUrl: 'https://github.com/OWNER/REPO/issues/new',
+        buildProfile: 'drafts-device',
         buildUrl: 'https://expo.dev/accounts/OWNER/projects/SLUG/builds',
         channel: 'drafts',
       }],
@@ -81,6 +84,16 @@ const { runtimeVersion, updateId } = getDraftsState();
 ```
 
 The button's visibility applies to the current process. Include the plugin with `{ enabled: false }` in production builds. Without the plugin's native enabled flag, the installed module does not display a picker.
+
+## Native builds from the picker
+
+Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install Compatible Build**, which opens its EAS installation page. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
+
+Build requests require repository write access. Trusted GitHub Actions code validates the request against the current draft catalog and the PR's source commit before dispatching EAS Workflows. The EAS workflow reuses an existing matching internal device build, or creates one. Only a completed build with verified project, runtime, profile, and device distribution metadata gets an install link. Expo and Apple credentials remain in GitHub/EAS.
+
+Your iPhone must be included in the build's ad hoc provisioning profile. Installation requires the system installation flow and replaces the app's native binary. Reopen the app afterward; only updates matching that build's runtime will be selectable. TestFlight is not required.
+
+The build catalog and request URL are optional. Existing update selection works without them. See [native build setup](docs/native-builds.md) for signing, workflows, and integration in another repository.
 
 ## Publish from PRs
 
@@ -145,7 +158,7 @@ The iOS cache adapter uses Expo SDK 57's `updates` and `json_data` schema throug
 
 The same app installation shares its local data across drafts. Keep database migrations and persisted state compatible across the PRs you switch between. The picker changes JavaScript and assets, not native code.
 
-The build link opens EAS. It does not request a paid build automatically. Closed PR cleanup and access-controlled catalog authentication are not implemented in this first version.
+Creating a GitHub build request can consume EAS build minutes. Opening the request page alone starts no build. Closed PR cleanup and access-controlled catalog authentication are not implemented in this first version.
 
 The design follows Expo's [channel surfing](https://docs.expo.dev/eas-update/channel-surfing/), [runtime compatibility](https://docs.expo.dev/eas-update/runtime-versions/), and [error recovery](https://docs.expo.dev/eas-update/error-recovery/) behavior. Native implementation references were inspected in the local Expo repository.
 

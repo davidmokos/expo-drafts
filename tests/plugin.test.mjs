@@ -64,3 +64,23 @@ test('disabled production integration needs no catalog and leaves update behavio
   assert.equal(result.updates.checkAutomatically, 'ON_LOAD');
   assert.equal(result.runtimeVersion, undefined);
 });
+
+test('build requests use GitHub authentication and reject arbitrary request endpoints', () => {
+  assert.doesNotThrow(() => withExpoDrafts({}, {
+    ...options,
+    buildsCatalogUrl: 'https://example.com/build-catalog.json',
+    buildRequestUrl: 'https://github.com/owner/repo/issues/new',
+    buildProfile: 'drafts-device',
+  }));
+  for (const buildRequestUrl of [
+    'https://example.com/request',
+    'https://github.com/owner/repo/issues/new?body=changed',
+    'https://github.com/owner/repo/issues/new#changed',
+    'https://github.com:8443/owner/repo/issues/new',
+    'https://github.com/owner/repo/actions',
+  ]) {
+    assert.throws(() => withExpoDrafts({}, { ...options, buildRequestUrl }), /buildRequestUrl/);
+  }
+  assert.throws(() => withExpoDrafts({}, { ...options, buildsCatalogUrl: 'http://example.com/builds' }), /HTTPS/);
+  assert.throws(() => withExpoDrafts({}, { ...options, buildProfile: '../production' }), /buildProfile/);
+});
