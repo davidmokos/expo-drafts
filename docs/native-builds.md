@@ -18,6 +18,8 @@ The picker retains an **Installation requested** row after the URL handoff, incl
 
 The **Running** row always describes the actual launched bundle, independently of installation requests and catalog availability. An embedded bundle has its own UUID and may differ from every published EAS Update. Only an exact update ID and runtime match can supply a preview name. Tapping the row shows the full identity and native app version.
 
+**Run bundled version** appears below Running while an EAS Update is active. It selects the installed build's embedded bundle locally, restores its original update headers, and verifies the exact bundle before reloading. It works without the catalog and remains selected across app restarts. It does not install or downgrade native code, delete app data, or prevent selecting compatible PR updates afterward. Expo continues to manage its update cache and recovery.
+
 ## Configure another app
 
 Use an internal Release device profile in `eas.json`:
