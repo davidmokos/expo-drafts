@@ -1,8 +1,29 @@
 {
   "schemaVersion": 1,
   "projectId": "e8ecb8b1-95ac-4f76-965a-df4b39ea3929",
-  "generatedAt": "2026-09-09T11:44:58.838Z",
+  "generatedAt": "2026-09-09T11:45:15.629Z",
   "drafts": [
+    {
+      "id": "02aff440-d060-4a7a-b55b-530f9c2a5692",
+      "name": "[example] Reading list",
+      "channel": "draft-pr-2",
+      "branch": "draft-pr-2",
+      "message": "[example] Reading list",
+      "createdAt": "2026-09-09T11:44:41.387Z",
+      "gitCommitHash": "de7c50c70e0c2c95af001ed4fc38129e7a9afc14",
+      "pullRequest": {
+        "number": 2,
+        "url": "https://github.com/davidmokos/expo-drafts/pull/2"
+      },
+      "updates": [
+        {
+          "id": "01a085fc-05ab-7d36-95e2-e8ef19dd5776",
+          "groupId": "02aff440-d060-4a7a-b55b-530f9c2a5692",
+          "platform": "ios",
+          "runtimeVersion": "bd60359c5e450058d8f98dbde40e5beefb68fe2e"
+        }
+      ]
+    },
     {
       "id": "357a9832-0156-4da4-bdaf-646c0ec433e5",
       "name": "[example] Color studio",
@@ -40,27 +61,6 @@
         {
           "id": "01a08311-8da0-7f8f-bd0f-781515385bee",
           "groupId": "791612a3-eafb-4522-a32f-e273aebaed3d",
-          "platform": "ios",
-          "runtimeVersion": "4b251db3e96d71fbcd20d1be7d63ddf929309765"
-        }
-      ]
-    },
-    {
-      "id": "b01e9978-0f86-4f3d-bb2e-6e16fb91df6a",
-      "name": "[example] Reading list",
-      "channel": "draft-pr-2",
-      "branch": "draft-pr-2",
-      "message": "[example] Reading list",
-      "createdAt": "2026-09-08T22:09:16.345Z",
-      "gitCommitHash": "892fb51f8e6f3eaa76b9b3ed1a7de44728b9b2db",
-      "pullRequest": {
-        "number": 2,
-        "url": "https://github.com/davidmokos/expo-drafts/pull/2"
-      },
-      "updates": [
-        {
-          "id": "01a08311-7c39-7dc5-bcc8-ded78524f3e6",
-          "groupId": "b01e9978-0f86-4f3d-bb2e-6e16fb91df6a",
           "platform": "ios",
           "runtimeVersion": "4b251db3e96d71fbcd20d1be7d63ddf929309765"
         }
