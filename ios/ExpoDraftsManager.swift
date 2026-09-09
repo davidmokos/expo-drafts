@@ -13,6 +13,7 @@ final class ExpoDraftsManager {
   private var buildsCatalogTask: URLSessionDataTask?
   private var installationRequest: DraftBuildManifestRequest?
   private var preparingInstallation = false
+  private let installationState = DraftInstallationStateStore()
   private var buildsCatalogGeneration = UUID()
   private(set) var buildsCatalog: DraftBuildCatalog?
   private(set) var buildsCatalogLoading = false
@@ -36,6 +37,22 @@ final class ExpoDraftsManager {
   var currentChannel: String { constants["channel"] as? String ?? "" }
   var currentUpdateID: String { (constants["updateId"] as? String ?? "").lowercased() }
   var updatesEnabled: Bool { constants["isEnabled"] as? Bool ?? false }
+
+  var pendingInstallation: DraftInstallationRequest? {
+    installationState.active(projectID: projectID, currentRuntime: runtimeVersion)
+  }
+
+  func dismissInstallationStatus() {
+    installationState.clear()
+  }
+
+  func bundleIdentity(drafts: [DraftEntry]) -> DraftBundleIdentity {
+    DraftBundleIdentity(
+      constants: constants, drafts: drafts,
+      nativeVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
+      nativeBuild: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+    )
+  }
 
   func state() -> [String: Any] {
     [
@@ -233,6 +250,7 @@ final class ExpoDraftsManager {
     completion(DraftsError.message("Device builds cannot be installed in the simulator. Open this draft on a registered iPhone or iPad to install it."))
     #else
     preparingInstallation = true
+    let sourceRuntime = runtimeVersion
     do {
       let request = try DraftBuildManifestRequest(projectID: projectID, buildID: buildID, bundleIdentifier: bundleIdentifier) { [weak self] result in
         guard let self else { return }
@@ -251,8 +269,23 @@ final class ExpoDraftsManager {
           // A successful open only hands the manifest to iOS. Installation may be
           // cancelled or fail later; the app must not record it as completed.
           UIApplication.shared.open(installerURL, options: [:]) { success in
-            self.preparingInstallation = false
-            completion(success ? nil : DraftsError.message("iOS could not open the installer. Try again on a registered physical device."))
+            DispatchQueue.main.async {
+              self.preparingInstallation = false
+              guard success else {
+                completion(DraftsError.message("iOS could not open the installer. Try again on a registered physical device."))
+                return
+              }
+              do {
+                try self.installationState.save(DraftInstallationRequest(
+                  projectID: self.projectID, sourceRuntime: sourceRuntime,
+                  targetRuntime: update.runtimeVersion, buildID: buildID,
+                  draftID: draft.id, name: draft.name, requestedAt: Date()
+                ))
+                completion(nil)
+              } catch {
+                completion(DraftsError.message("iOS opened the installer, but the request status could not be saved. After confirming Install, go to the Home Screen and reopen the app when installation finishes."))
+              }
+            }
           }
         }
       }

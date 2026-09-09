@@ -52,7 +52,7 @@ export default {
 
 The plugin configures EAS Update, an embedded channel header, manual update checks, and native picker settings. It preserves other custom request headers and refuses a mismatched EAS project or disabled update recovery.
 
-Create an internal release build. A development build or Expo Go cannot load these updates:
+Create an internal release build for expo-drafts. Its native picker requires Release mode and is unavailable in Expo Go:
 
 ```json
 {
@@ -85,9 +85,13 @@ const { runtimeVersion, updateId } = getDraftsState();
 
 The button's visibility applies to the current process. Include the plugin with `{ enabled: false }` in production builds. Without the plugin's native enabled flag, the installed module does not display a picker.
 
+The picker's **Running** section identifies the active bundle immediately, including the first launch after installing another native build. It shows the preview name when the running EAS Update exactly matches a catalog entry. Otherwise, it identifies the bundle included in the build or a downloaded update by its own ID. Tap this row for the full bundle ID, creation time, app version, and native runtime. Sharing a runtime does not make two bundles the same version.
+
 ## Native builds from the picker
 
-Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install compatible build**, which hands the build directly to iOS's installer without opening the EAS website. Confirm the system installation dialog, then reopen the app. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
+Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install compatible build**, which hands the build directly to iOS's installer without opening the EAS website. Confirm the system installation dialog, then go to the Home Screen. Wait for the app icon to finish installing before reopening the app. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
+
+After the installer opens, **Installation requested** remains at the top of the picker with an activity indicator and the Home Screen instruction. This records the request, not download progress or confirmation that installation succeeded. Tap it to retry or hide the status if you canceled the iOS prompt. It survives reopening the picker and app, clears when the native runtime changes, and expires after 15 minutes.
 
 Build requests require repository write access. Trusted GitHub Actions code validates the request against the current draft catalog and the PR's source commit before dispatching EAS Workflows. The EAS workflow reuses an existing matching internal device build, or creates one. Only a completed build with verified project, runtime, profile, and device distribution metadata gets an install link. Expo and Apple credentials remain in GitHub/EAS.
 
@@ -117,7 +121,7 @@ Host `catalog.json` at the configured HTTPS URL. Pass `--merge catalog.json` to 
 
 `example/` is Drafts Lab, a new Expo app linked to `@mokosdavid/expo-drafts-lab`. Its native picker uses this repository's catalog. Set `EXPO_PUBLIC_DRAFT_VARIANT` to `amber` or `ocean` while publishing to produce distinct app screens.
 
-The native build actions in commit `6648eee` use runtime `bd60359c5e450058d8f98dbde40e5beefb68fe2e`. PRs #1 through #4 have been republished through EAS Workflows for that runtime. PR #5 changes `ios.supportsTablet` to `false`, producing runtime `d9c89e22141f261165d3e46ae7268a3453a1e839` and a real native mismatch for the build request flow. The original manual Amber, Ocean, and Camera experiment entries remain in the catalog and require different builds. See the [validation record](docs/ios-validation.md#current-native-build-actions-and-publications) for exact update IDs, source commits, and completed checks.
+Direct installation uses native runtime `166ee8786683217e3c8d06b3e8b322e68f80e17d`. PRs #1 through #4 have been republished through EAS Workflows for that runtime. PR #5 changes `ios.supportsTablet` to `false` and uses runtime `b585b87f336c7d3a807921c6c6e80795b9fdd2e0`, providing a real native upgrade to try from the picker. The original manual Amber, Ocean, and Camera entries remain in the catalog with earlier runtimes. See the [validation record](docs/ios-validation.md#direct-installation-from-the-app) for exact update IDs and completed checks.
 
 ```sh
 npm ci
@@ -156,7 +160,7 @@ Channel switching keeps Expo's embedded fallback and anti-bricking measures enab
 
 The iOS cache adapter uses Expo SDK 57's `updates` and `json_data` schema through public `UpdatesDatabase` APIs. Review it when upgrading the SDK. The picker serializes its own switches; app code must not start another `expo-updates` download or reload during a switch.
 
-The same app installation shares its local data across drafts. Keep database migrations and persisted state compatible across the PRs you switch between. The picker changes JavaScript and assets, not native code.
+The same app installation shares its local data across drafts. Keep database migrations and persisted state compatible across the PRs you switch between. Switching EAS Updates changes JavaScript and assets. Installing a compatible build replaces the native binary.
 
 Creating a GitHub build request can consume EAS build minutes. Opening the request page alone starts no build. Closed PR cleanup and access-controlled catalog authentication are not implemented in this first version.
 
