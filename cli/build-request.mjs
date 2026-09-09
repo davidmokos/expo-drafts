@@ -3,12 +3,31 @@ import { readFile, writeFile, appendFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
-import { validateCatalog } from './catalog.mjs';
+import { setTimeout } from 'node:timers/promises';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SHA = /^[0-9a-f]{40}$/i;
 const RUNTIME = /^[a-zA-Z0-9._-]{1,255}$/;
 const REPOSITORY = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/;
+
+// Deliberately omit a runtime filter: an older compatible update must never
+// replace the latest publication selected in the picker.
+export const buildRequestQuery = `query DraftBuildSource($appId: String!, $channelName: String!) {
+  app { byId(appId: $appId) {
+    id
+    updateChannelByName(name: $channelName) {
+      id name isPaused branchMapping
+      updateBranches(offset: 0, limit: 2) {
+        id name
+        updates(offset: 0, limit: 1, filter: { platform: IOS }) {
+          id group message platform runtime { version }
+          gitCommitHash isRollBackToEmbedded
+          rolloutPercentage rolloutControlUpdate { id }
+        }
+      }
+    }
+  } }
+}`;
 
 export function parseBuildRequest(body) {
   if (typeof body !== 'string' || body.length > 16000) throw new Error('Invalid build request body.');
@@ -24,38 +43,94 @@ export function parseBuildRequest(body) {
   return request;
 }
 
-/** Request text is untrusted. Only a current catalog entry can select build source. */
-export function validateBuildRequest(request, input, { projectId, permission }) {
+function validatePermission(permission) {
   if (!['admin', 'maintain', 'write'].includes(permission)) {
     throw new Error('Build requests require write access to this repository.');
   }
-  const catalog = validateCatalog(input);
+}
+
+/** Request text is untrusted. EAS supplies the current channel and source. */
+export function validateBuildRequest(request, app, { projectId, permission }) {
+  validatePermission(permission);
   if (request.projectId.toLowerCase() !== projectId.toLowerCase() ||
-    catalog.projectId.toLowerCase() !== projectId.toLowerCase()) {
-    throw new Error('The request or catalog belongs to another EAS project.');
+    app?.id?.toLowerCase() !== projectId.toLowerCase()) {
+    throw new Error('The request or update belongs to another EAS project.');
   }
-  const draft = catalog.drafts.find((draft) => draft.channel === request.channel);
-  const update = draft?.updates.find((update) => update.platform === 'ios');
-  if (!update || update.id.toLowerCase() !== request.updateId.toLowerCase() ||
-    update.runtimeVersion !== request.runtimeVersion) {
+  const channel = app.updateChannelByName;
+  if (!channel || channel.name !== request.channel) {
     throw new Error('This preview changed. Refresh the draft picker and request its current build.');
   }
-  if (!SHA.test(draft.gitCommitHash ?? '') ||
-    (request.gitCommitHash && request.gitCommitHash.toLowerCase() !== draft.gitCommitHash.toLowerCase())) {
-    throw new Error('The requested preview has no matching source commit in the catalog.');
+  let mapping;
+  try { mapping = JSON.parse(channel.branchMapping); } catch { /* Reject below. */ }
+  const branch = channel.updateBranches?.[0];
+  if (channel.isPaused !== false || mapping?.version !== 0 || !Array.isArray(mapping.data) ||
+    mapping.data.length !== 1 || mapping.data[0]?.branchMappingLogic !== 'true' ||
+    !UUID.test(mapping.data[0]?.branchId ?? '') || !Array.isArray(channel.updateBranches) ||
+    channel.updateBranches.length !== 1 || branch?.id?.toLowerCase() !== mapping.data[0].branchId.toLowerCase()) {
+    throw new Error('The EAS channel must be active and route directly to one branch without a rollout.');
   }
+  const update = branch.updates?.[0];
+  if (!Array.isArray(branch.updates) || branch.updates.length !== 1 ||
+    !UUID.test(update?.id ?? '') || !UUID.test(update?.group ?? '') || update.platform !== 'ios' ||
+    update.id.toLowerCase() !== request.updateId.toLowerCase() ||
+    update.runtime?.version !== request.runtimeVersion) {
+    throw new Error('This preview changed. Refresh the draft picker and request its current build.');
+  }
+  if (update.isRollBackToEmbedded !== false ||
+    (update.rolloutPercentage != null && update.rolloutPercentage !== 100) || update.rolloutControlUpdate != null) {
+    throw new Error('Build requests require a complete EAS publication without a rollout or rollback.');
+  }
+  if (!SHA.test(update.gitCommitHash ?? '') ||
+    (request.gitCommitHash && request.gitCommitHash.toLowerCase() !== update.gitCommitHash.toLowerCase())) {
+    throw new Error('The requested preview has no matching source commit in EAS.');
+  }
+  const prNumber = /^draft-pr-([1-9]\d*)$/.exec(channel.name)?.[1];
+  if (prNumber && !Number.isSafeInteger(Number(prNumber))) throw new Error('Invalid PR channel number.');
   return {
     schemaVersion: 1,
-    projectId: catalog.projectId,
-    runtimeVersion: update.runtimeVersion,
+    projectId: app.id,
+    runtimeVersion: update.runtime.version,
     updateId: update.id,
-    channel: draft.channel,
-    gitCommitHash: draft.gitCommitHash,
-    name: draft.name,
-    pullRequest: draft.pullRequest?.number,
+    channel: channel.name,
+    gitCommitHash: update.gitCommitHash,
+    name: typeof update.message === 'string' && update.message.trim() ? update.message.trim() : channel.name,
+    pullRequest: prNumber ? Number(prNumber) : undefined,
     profile: 'drafts-device',
     platform: 'ios',
   };
+}
+
+export async function fetchBuildRequestSource(projectId, channel, {
+  token = process.env.EXPO_TOKEN, fetchImpl = fetch, sleep = (ms) => setTimeout(ms),
+} = {}) {
+  if (!token) throw new Error('EXPO_TOKEN is required to verify published EAS updates.');
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetchImpl('https://api.expo.dev/graphql', {
+        method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({ query: buildRequestQuery, variables: { appId: projectId, channelName: channel } }),
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!response.ok) {
+        const error = new Error(`EAS update verification returned HTTP ${response.status}.`);
+        error.retryable = response.status === 429 || response.status >= 500;
+        throw error;
+      }
+      const result = await response.json();
+      if (result.errors?.length || !result.data?.app?.byId) {
+        const error = new Error('EAS rejected update verification. Check project access and refresh the draft.');
+        error.retryable = result.errors?.some((error) => error.extensions?.isTransient) ?? false;
+        throw error;
+      }
+      return result.data.app.byId;
+    } catch (error) {
+      if (error.retryable === false || attempt === 2) {
+        // Do not expose raw network/GraphQL errors, which may contain credentials.
+        throw new Error('Could not verify the published update with EAS. Check project access and retry.');
+      }
+      await sleep(1000 * 2 ** attempt);
+    }
+  }
 }
 
 export async function githubJson(path, { token = process.env.GH_TOKEN, fetchImpl = fetch } = {}) {
@@ -82,6 +157,7 @@ async function main() {
   const actor = event.sender?.login;
   if (!/^[a-zA-Z0-9-]+(?:\[bot\])?$/.test(actor ?? '')) throw new Error('Missing GitHub request actor.');
   const access = await githubJson(`/repos/${repository}/collaborators/${encodeURIComponent(actor)}/permission`);
+  validatePermission(access.permission);
   // workflow_dispatch is available for validating the pipeline without a browser.
   const raw = event.issue ? parseBuildRequest(event.issue.body) : {
     schemaVersion: 1, projectId: values['project-id'],
@@ -89,10 +165,8 @@ async function main() {
     runtimeVersion: event.inputs?.runtime_version,
   };
   const request = parseBuildRequest(`\`\`\`expo-drafts-build-request\n${JSON.stringify(raw)}\n\`\`\``);
-  const file = await githubJson(`/repos/${repository}/contents/catalog.json?ref=drafts-catalog`);
-  if (file.encoding !== 'base64' || typeof file.content !== 'string') throw new Error('Missing draft catalog.');
-  const catalog = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
-  const verified = validateBuildRequest(request, catalog, { projectId: values['project-id'], permission: access.permission });
+  const app = await fetchBuildRequestSource(values['project-id'], request.channel);
+  const verified = validateBuildRequest(request, app, { projectId: values['project-id'], permission: access.permission });
   if (verified.pullRequest) {
     const pr = await githubJson(`/repos/${repository}/pulls/${verified.pullRequest}`);
     if (pr.head?.repo?.full_name?.toLowerCase() !== repository.toLowerCase() || pr.head?.sha !== verified.gitCommitHash) {

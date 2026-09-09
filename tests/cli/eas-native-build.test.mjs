@@ -1,5 +1,10 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { tmpdir } from 'node:os';
+import { join, delimiter } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 import {
@@ -57,6 +62,37 @@ const metadata = {
   completedAt: '2026-09-09T01:59:00.000Z',
   artifacts: { applicationArchiveUrl: 'https://expo.dev/artifacts/eas/example.ipa' },
 };
+
+test('report-only native build observation verifies an artifact without a Git checkout or catalog writer', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'expo-drafts-eas-report-'));
+  try {
+    const bin = join(directory, 'bin');
+    await mkdir(bin);
+    await writeFile(join(bin, 'eas'), `#!${process.execPath}\nprocess.stdout.write(${JSON.stringify(JSON.stringify(metadata))});\n`, { mode: 0o755 });
+    await writeFile(join(directory, 'request.json'), JSON.stringify(expected));
+    await writeFile(join(directory, 'run.json'), JSON.stringify({ id: expected.runId }));
+    const preload = join(directory, 'mock-eas.mjs');
+    await writeFile(preload, `globalThis.fetch = async () => ({ok:true,json:async () => (${JSON.stringify({ data: { workflowRuns: { byId: run } } })})});\n`);
+    const report = join(directory, 'ready.json');
+    const summary = join(directory, 'summary.md');
+    const { stdout } = await promisify(execFile)(process.execPath, [
+      '--import', preload, fileURLToPath(new URL('../../cli/eas-native-build.mjs', import.meta.url)),
+      'wait', '--request', join(directory, 'request.json'), '--run-file', join(directory, 'run.json'),
+      '--no-publish', '--project-directory', directory, '--output', report,
+    ], {
+      cwd: directory,
+      env: { ...process.env, EXPO_TOKEN: 'test-only', PATH: `${bin}${delimiter}${process.env.PATH}`, GITHUB_STEP_SUMMARY: summary },
+    });
+    const result = JSON.parse(await readFile(report, 'utf8'));
+    assert.equal(result.builds[0].buildId, buildId);
+    assert.equal(result.builds[0].runtimeVersion, expected.runtimeVersion);
+    assert.equal(result.builds[0].state, 'ready');
+    assert.match(stdout, /Compatible build is ready/);
+    assert.match(await readFile(summary, 'utf8'), /Compatible iPhone build created/);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
 
 test('native workflow identity binds the project, file, source, runtime, and request', () => {
   validateNativeBuildWorkflow(run, expected);

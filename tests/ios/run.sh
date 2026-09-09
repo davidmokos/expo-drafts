@@ -19,6 +19,8 @@ swiftc ios/ExpoDraftsInstallationState.swift tests/ios/installation-state-tests.
 "$test_dir/installation-state-tests"
 swiftc ios/ExpoDraftsCatalog.swift ios/ExpoDraftsBundleIdentity.swift tests/ios/bundle-identity-tests.swift -o "$test_dir/bundle-identity-tests"
 "$test_dir/bundle-identity-tests"
+swiftc ios/ExpoDraftsCatalog.swift ios/ExpoDraftsBuildCatalog.swift ios/ExpoDraftsEASClient.swift tests/ios/eas-client-tests.swift -o "$test_dir/eas-client-tests"
+"$test_dir/eas-client-tests"
 node --input-type=module - "$test_dir/build-request-fixture.json" <<'NODE'
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

@@ -90,13 +90,18 @@ async function main() {
     request: { type: 'string' }, 'run-file': { type: 'string' }, repository: { type: 'string' },
     state: { type: 'string' }, output: { type: 'string' },
     'project-directory': { type: 'string' },
+    'no-publish': { type: 'boolean', default: false },
   } });
   const command = positionals[0];
   if (positionals.length !== 1 || !['state', 'wait'].includes(command) || !values.request) {
-    throw new Error('Use state|wait --request FILE --repository DIR [--state STATE] [--run-file FILE].');
+    throw new Error('Use state|wait --request FILE [--repository DIR] [--state STATE] [--run-file FILE] [--no-publish].');
   }
   const request = JSON.parse(await readFile(values.request, 'utf8'));
-  const publish = async (input) => publishBuildCatalog({ input, repository: values.repository ?? '.' });
+  // Direct EAS discovery needs only the verified report. Preserve the writer
+  // for legacy callers; the supplied workflow opts out with --no-publish.
+  const publish = async (input) => {
+    if (!values['no-publish']) await publishBuildCatalog({ input, repository: values.repository ?? '.' });
+  };
   if (command === 'state') {
     await publish(buildCatalogFromRequest({ ...request, state: values.state, updatedAt: new Date().toISOString() }));
     return;
