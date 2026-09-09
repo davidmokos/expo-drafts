@@ -1,12 +1,46 @@
-# iOS validation, September 8, 2026
+# iOS validation, September 8 and 9, 2026
 
 The package and Drafts Lab were compiled in Release mode and tested on an iPhone 17 Pro Max simulator running iOS 26.3. No Metro server was running while the app selected, downloaded, or launched updates. The native build was compiled locally with Xcode; EAS hosted the actual remote updates.
 
 The app uses Expo SDK 57, React Native 0.86.3, and expo-updates 57.0.21. Its EAS project is [@mokosdavid/expo-drafts-lab](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab), and its bundle identifier is `dev.davidmokos.draftslab`.
 
-## Published test updates
+## Current native picker and publications
 
-The installed native runtime is `49c985303fd99723dc5d59a62ef5e31c1c34d457`.
+Commit [`d3baee0`](https://github.com/davidmokos/expo-drafts/commit/d3baee015d8c9745014d527e515cfa7cd0a6a312) simplifies the picker to standard UIKit inset grouped rows, a search field, a Done button, pull to refresh, and a checkmark for the current update. Rows show a preview name and PR number, or a channel for manual previews. UIKit supplies the navigation title and system light or dark appearance. The draggable launcher is a `UIButton` with system glass styling on iOS 26 and later, and tinted styling on earlier versions. Commit hashes and runtime details remain in catalog metadata rather than the picker rows.
+
+The managed iOS runtime is now `4b251db3e96d71fbcd20d1be7d63ddf929309765`. All four PR branches merged the native change without rewriting their history and republished successfully through EAS Workflows. Each artifact matched the catalog's exact iOS update ID, update group, source commit, and runtime.
+
+| Preview | Channel | Current iOS update ID |
+| ------- | ------- | --------------------- |
+| [PR #1 workspace](https://github.com/davidmokos/expo-drafts/pull/1) | `draft-pr-1` | `01a08311-256d-79a0-a5ae-0dc3fcaa1425` |
+| [PR #2 Reading list](https://github.com/davidmokos/expo-drafts/pull/2) | `draft-pr-2` | `01a08311-7c39-7dc5-bcc8-ded78524f3e6` |
+| [PR #3 Focus timer](https://github.com/davidmokos/expo-drafts/pull/3) | `draft-pr-3` | `01a08311-8da0-7f8f-bd0f-781515385bee` |
+| [PR #4 Color studio](https://github.com/davidmokos/expo-drafts/pull/4) | `draft-pr-4` | `01a08311-e533-7f04-aea2-5627a3acd506` |
+
+All of these EAS workflows, GitHub publishing runs, and package checks passed:
+
+| PR | EAS Workflow | GitHub publishing run | Package checks |
+| -- | ------------ | --------------------- | -------------- |
+| #1 | [01a08310-14ea](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08310-14ea-7854-95ec-4ae8cfac0bc1) | [34284195380](https://github.com/davidmokos/expo-drafts/actions/runs/34284195380) | [34284195345](https://github.com/davidmokos/expo-drafts/actions/runs/34284195345) |
+| #2 | [01a08310-6f0c](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08310-6f0c-78d3-aeeb-dc7f75414b82) | [34284223680](https://github.com/davidmokos/expo-drafts/actions/runs/34284223680) | [34284223540](https://github.com/davidmokos/expo-drafts/actions/runs/34284223540) |
+| #3 | [01a08310-696f](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08310-696f-79e0-a60f-3dbe1849618f) | [34284232251](https://github.com/davidmokos/expo-drafts/actions/runs/34284232251) | [34284232246](https://github.com/davidmokos/expo-drafts/actions/runs/34284232246) |
+| #4 | [01a08310-b084](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08310-b084-787f-8ffc-cea025a0289c) | [34284244050](https://github.com/davidmokos/expo-drafts/actions/runs/34284244050) | [34284244140](https://github.com/davidmokos/expo-drafts/actions/runs/34284244140) |
+
+[Catalog commit `38c5183`](https://github.com/davidmokos/expo-drafts/blob/38c5183a16a347cd6ebe8eaf01b2686b5b96b8d3/catalog.json) retains seven entries. The four PRs match the new runtime. The manual Amber and Ocean entries still use `49c985303fd99723dc5d59a62ef5e31c1c34d457`, and Camera experiment uses `drafts-lab-native-v2`; all three are incompatible with the new native revision. Incompatible rows display "Requires a different build" and cannot launch. "Find a Compatible Build" opens the configured EAS build page.
+
+## Current simulator checks
+
+- Launched PR workspace, Reading list, Focus timer, and Color studio through the native picker. Each app's diagnostic output showed its full update ID matching the current publications table and runtime `4b251db3e96d71fbcd20d1be7d63ddf929309765`.
+- Reopened the picker on Reading list, Focus timer, and Color studio and confirmed each current entry had a checkmark.
+- Checked the native picker in system light and dark appearance.
+- Filtered the draft list with search and verified that tapping an incompatible draft did not launch it.
+- Switched from Color studio to the older Reading list update and cold-restarted the app. Reading list reopened with exact ID `01a08311-7c39-7dc5-bcc8-ded78524f3e6` and the same runtime.
+
+The historical checks below apply to the earlier runtime.
+
+## Earlier published test updates
+
+The earlier installed native runtime was `49c985303fd99723dc5d59a62ef5e31c1c34d457`. Compatibility in this table refers to that build.
 
 | Draft             | Channel        | iOS update ID                          | Compatibility                               |
 | ----------------- | -------------- | -------------------------------------- | ------------------------------------------- |
@@ -20,7 +54,7 @@ The installed native runtime is `49c985303fd99723dc5d59a62ef5e31c1c34d457`.
 
 The Camera experiment uses an explicit test runtime to exercise the disabled state; it does not add camera functionality. Normal previews use the fingerprint runtime policy.
 
-## Simulator checks
+## Earlier simulator checks
 
 - Launched the embedded app without a development server.
 - Opened the native picker using its floating button.
@@ -46,7 +80,7 @@ The Camera experiment uses an explicit test runtime to exercise the disabled sta
 
 The demo interactions use state local to the current JavaScript session. Reading progress, saved palettes, and timer state reset when the app restarts or switches updates. The selected update itself persists across restarts.
 
-## PR workflow validation
+## Earlier PR workflow validation
 
 The repository's `EXPO_TOKEN` secret is configured. [PR #1](https://github.com/davidmokos/expo-drafts/pull/1) contains a JavaScript-only change to the default app screen, preserving the Amber and Ocean variants.
 
@@ -81,9 +115,11 @@ Their publishing runs overlapped. [Catalog commit `c34b626`](https://github.com/
 
 ## Physical iPhone validation
 
-A local Xcode 26.6 Release build for `iphoneos` completed using an existing Xcode-managed development wildcard provisioning profile. The profile matched the connected phone and available signing certificate. Automatic signing was configured only on the app target after manual signing rejected the managed profile. No new Apple login was required.
+A local signed Release build of the simplified native picker completed with runtime `4b251db3e96d71fbcd20d1be7d63ddf929309765`, and `codesign --verify --deep --strict` passed. `devicectl` installed and activated it on the user's iPhone 17 Pro Max running iOS 27 Beta, and a subsequent process check confirmed that the same app process was still running. Signing reused the existing Xcode-managed profile with Automatic signing, without a fresh Apple login. The installation was local; no EAS cloud device build was run. This confirms installation and process launch, with UI interaction checks recorded separately for the simulator.
 
-`codesign --verify --deep --strict` passed for the resulting app. Its embedded `EXUpdates.bundle` contained runtime fingerprint `49c985303fd99723dc5d59a62ef5e31c1c34d457`, matching the PR updates above.
+The earlier app build used local Xcode 26.6 in Release mode for `iphoneos` with an existing Xcode-managed development wildcard provisioning profile. The profile matched the connected phone and available signing certificate. Automatic signing was configured only on the app target after manual signing rejected the managed profile. No new Apple login was required.
+
+`codesign --verify --deep --strict` passed for the resulting app. Its embedded `EXUpdates.bundle` contained runtime fingerprint `49c985303fd99723dc5d59a62ef5e31c1c34d457`, matching the earlier PR updates.
 
 `devicectl` installed and launched the app on the user's iPhone 17 Pro Max running iOS 27 Beta. A subsequent process check confirmed that it was still running. This was a local installation; no EAS cloud device build was run. PR selection and the demo interactions were tested in the simulator. Physical-phone validation covers signing, installation, and process launch, without claiming phone UI tests.
 
