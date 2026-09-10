@@ -1,0 +1,50 @@
+name: Publish PR draft on EAS
+run_name: ${{ inputs.channel }} / ${{ inputs.name }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        type: string
+        required: true
+        description: EAS Update channel for this PR
+      name:
+        type: string
+        required: true
+        description: PR title shown in the draft picker
+      git_commit:
+        type: string
+        required: true
+        description: Exact source commit uploaded by GitHub Actions
+      github_run_id:
+        type: string
+        required: true
+        description: GitHub Actions run that dispatched this publication
+
+# GitHub cancels obsolete PR jobs; their CLI cancellation helper stops EAS runs.
+# EAS currently treats custom group names as placeholders, not enforced locks.
+concurrency:
+  group: expo-drafts-${{ inputs.channel }}
+  cancel_in_progress: true
+
+defaults:
+  image: sdk-57
+  tools:
+    node: '24.11.1'
+
+jobs:
+  publish_update:
+    name: Publish iOS update
+    type: update
+    environment: preview
+    env:
+      DRAFTS_ENABLED: '1'
+      DRAFT_EXPECTED_COMMIT: ${{ inputs.git_commit }}
+    params:
+      platform: ios
+      channel: ${{ inputs.channel }}
+      message: ${{ inputs.name }}
+    hooks:
+      before_update:
+        - name: Verify uploaded source commit
+          run: test "$(git rev-parse HEAD)" = "$DRAFT_EXPECTED_COMMIT"

@@ -1,0 +1,28 @@
+{
+  "cli": {
+    "version": "23.2.0"
+  },
+  "build": {
+    "drafts-device": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "channel": "drafts",
+      "environment": "preview",
+      "credentialsSource": "remote",
+      "env": {
+        "DRAFTS_ENABLED": "1"
+      },
+      "ios": {
+        "simulator": false,
+        "buildConfiguration": "Release"
+      }
+    },
+    "drafts-simulator": {
+      "extends": "drafts-device",
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Release"
+      }
+    }
+  }
+}
