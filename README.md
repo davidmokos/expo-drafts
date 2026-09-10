@@ -2,7 +2,7 @@
 
 A native draft picker for Expo apps. Publish a pull request to EAS Update, open the floating button, and run that PR in an installed preview build. No Metro server or `expo-dev-client` is required.
 
-This version targets iOS. The picker runs in UIKit, outside the React bundle, and remains available across JavaScript reloads and when JavaScript stops responding. Android source is included as unfinished work and is not registered for autolinking.
+This version targets iOS. The picker runs in UIKit, outside the React bundle, and remains available across JavaScript reloads and when JavaScript stops responding. Android and web are unsupported. Unfinished Android source remains in the repository and is excluded from the npm package.
 
 ## How drafts work
 
@@ -12,7 +12,7 @@ The picker uses standard UIKit inset grouped rows, search, a Done button, and pu
 
 Only the latest iOS publication on each channel is listed, newest first. Each row shows its publication date and time in the device's local format and time zone. Publishing again updates that entry and its position. For separate named experiments, use distinct channels such as `draft-search-redesign` or `draft-checkout-agent-a`.
 
-A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible and open native build actions when tapped. The included PR workflow automatically reuses or creates a matching native build after publication. The picker offers a compatible build when ready and shows builds in progress; **Request Build** remains available as a manual fallback. See [native build setup](docs/native-builds.md). The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
+A draft can run only when its platform and `runtimeVersion` match the installed native build. Incompatible drafts stay visible and open native build actions when tapped. The included PR workflow automatically reuses or creates a matching native build after publication. The picker offers a compatible build when ready and shows builds in progress; **Request Build** remains available as a manual fallback. See [native build setup](https://github.com/davidmokos/expo-drafts/blob/main/docs/native-builds.md). The plugin defaults to Expo's `fingerprint` runtime policy, so changes that affect native compatibility produce a different runtime.
 
 When installing a compatible build from the picker, it remembers the exact selected update. Reopen the app after iOS finishes installation and that update opens automatically. Interrupted attempts, network errors, or a changed publication show a native retry/cancel action.
 
@@ -22,66 +22,83 @@ Selecting a draft changes the native `expo-channel-name` header, downloads the u
 
 Version 0.1 targets iOS on Expo SDK 57 with `expo-updates` 57. It uses native update-controller APIs, so support for other SDK versions must be verified before widening the peer dependency range.
 
-Use EAS CLI 23.2 or newer. Until an npm release is published:
+Install the package in your Expo SDK 57 app:
 
 ```sh
-npx expo install expo-updates
-npm install github:davidmokos/expo-drafts
+npx expo install expo-drafts expo-updates
+npx eas-cli@23.2.0 init
 ```
 
-Run `eas init` in the app, then add the plugin:
+Use a separate internal **Release preview** profile with `developmentClient: false`. A normal Metro development build and Expo Go do not provide the update-controller behavior this picker needs. You can keep your usual `development` profile alongside it. See [Expo's update testing guidance](https://docs.expo.dev/versions/v57.0.0/sdk/updates/#testing).
+
+Merge this into your app's config after linking its own EAS project:
 
 ```js
 // app.config.js
-export default {
-  expo: {
-    name: 'My app previews',
-    slug: 'my-app',
-    extra: { eas: { projectId: 'YOUR_EAS_PROJECT_UUID' } },
+export default ({ config }) => {
+  const draftsEnabled = process.env.DRAFTS_ENABLED === '1';
+  return {
+    ...config,
+    runtimeVersion: draftsEnabled
+      ? { policy: 'fingerprint' }
+      : config.runtimeVersion,
     plugins: [
+      ...(config.plugins ?? []),
       ['expo-drafts', {
-        buildRequestUrl: 'https://github.com/OWNER/REPO/issues/new',
-        buildProfile: 'drafts-device',
-        buildUrl: 'https://expo.dev/accounts/OWNER/projects/SLUG/builds',
+        enabled: draftsEnabled,
         channel: 'drafts',
+        buildProfile: 'drafts-device',
+        buildRequestUrl: 'https://github.com/OWNER/REPO/issues/new',
       }],
     ],
-  },
+  };
 };
 ```
 
-The plugin configures EAS Update, an embedded channel header, manual update checks, the Expo sign-in callback scheme, and native picker settings. No catalog URL or hosted backend is needed. It preserves other custom request headers and refuses a mismatched EAS project or disabled update recovery.
+`eas init` supplies `extra.eas.projectId`. Replace `OWNER/REPO` with your app's GitHub repository. The plugin sets the EAS Update URL, initial channel header, manual update checks, Expo sign-in callback, and native picker settings. Use `DRAFTS_ENABLED=1` only for iOS preview builds and updates; leave it unset for production and Android. The disabled plugin preserves your normal update configuration.
 
-Create an internal release build for expo-drafts. Its native picker requires Release mode and is unavailable in Expo Go:
+Add this profile to `eas.json`:
 
 ```json
 {
   "build": {
-    "drafts": {
+    "drafts-device": {
+      "developmentClient": false,
       "distribution": "internal",
       "channel": "drafts",
       "environment": "preview",
-      "ios": { "simulator": true }
+      "credentialsSource": "remote",
+      "env": { "DRAFTS_ENABLED": "1" },
+      "ios": { "simulator": false, "buildConfiguration": "Release" }
     }
   }
 }
 ```
 
+Register your phone and create the first signed build:
+
 ```sh
-eas build --profile drafts --platform ios
-# Or compile and install locally:
-npx expo run:ios --configuration Release --no-bundler
+npx eas-cli@23.2.0 device:create
+DRAFTS_ENABLED=1 npx eas-cli@23.2.0 build --profile drafts-device --platform ios
 ```
+
+Install it on a registered device. For a simulator, use the `drafts-simulator` profile in the supplied template, or build locally with `DRAFTS_ENABLED=1 npx expo run:ios --configuration Release --no-bundler`.
+
+The [setup guide](https://github.com/davidmokos/expo-drafts/blob/main/docs/setup.md) includes copyable workflows for an app at the repository root, required repository settings, and signing setup. No hosted catalog or application backend is needed.
 
 The floating button appears automatically. Tap **Sign in to Expo** and choose an account with access to this EAS project. The browser handles authentication; expo-drafts never asks for your password. The account button lets you sign out, clearing the saved session and in-memory lists. No React provider, screen, or JavaScript initialization is required. To open it from your app:
 
 ```ts
-import { openDrafts, setDraftsVisible, getDraftsState } from 'expo-drafts';
+import { Platform } from 'react-native';
 
-await openDrafts();
-await setDraftsVisible(false);
-const { runtimeVersion, updateId } = getDraftsState();
+// Only in an iOS build that includes expo-drafts.
+if (Platform.OS === 'ios') {
+  const { openDrafts } = await import('expo-drafts');
+  await openDrafts();
+}
 ```
+
+Avoid an unconditional `expo-drafts` import in shared Android or web code. The package also exposes `setDraftsVisible()` and `getDraftsState()` on iOS.
 
 The button's visibility applies to the current process. Include the plugin with `{ enabled: false }` in production builds. Without the plugin's native enabled flag, the installed module does not display a picker.
 
@@ -93,24 +110,24 @@ When a downloaded update is running, **Run bundled version** appears directly be
 
 Tap an incompatible draft to see its native build actions. A finished build with the exact iOS runtime and configured device profile offers **Install compatible build**, which hands the build directly to iOS's installer without opening the EAS website. Confirm the system installation dialog, then go to the Home Screen. Wait for the app icon to finish installing before reopening the app. Queued and running builds show progress. If no matching build exists, **Request Build** opens a prefilled GitHub issue; sign in and submit it to start the build workflow. The app refreshes build status when you return, on pull to refresh, and every 30 seconds while an incompatible build is in progress and the picker is visible.
 
-After the installer opens, **Installation requested** remains at the top of the picker with an activity indicator and the Home Screen instruction. This records the request, not download progress or confirmation that installation succeeded. Tap it to retry or hide the status if you canceled the iOS prompt. It survives reopening the picker and app, clears when the native runtime changes, and expires after 15 minutes.
+After the installer opens, **Installation requested** shows an activity indicator for up to 15 minutes. iOS does not report download progress or completed installation to the app. The exact selected update remains saved for seven days. Reopen the matching native build to resume it automatically; a failed or interrupted attempt offers an explicit retry. **Cancel Auto-Open** clears the selection without canceling an installation already accepted by iOS.
 
 Build requests require repository write access. Trusted GitHub Actions code validates the request against the current EAS channel update and the PR's source commit before dispatching EAS Workflows. The EAS workflow reuses an existing matching internal device build, or creates one. Only a completed build with verified project, runtime, profile, and device distribution metadata gets an install link. Publishing and signing credentials remain in GitHub/EAS.
 
 Your iPhone must be included in the build's ad hoc provisioning profile. Installation requires the system installation flow and replaces the app's native binary. Reopen the app afterward; only updates matching that build's runtime will be selectable. TestFlight is not required.
 
-Build discovery uses EAS directly. The GitHub build request URL is optional; existing build installation and update selection work without it. See [native build setup](docs/native-builds.md) for signing, workflows, and integration in another repository.
+Build discovery uses EAS directly. The GitHub build request URL is optional; existing build installation and update selection work without it. See [native build setup](https://github.com/davidmokos/expo-drafts/blob/main/docs/native-builds.md) for signing, workflows, and integration in another repository.
 
 ## Publish from PRs
 
-See [the workflow guide](docs/workflow.md), the [GitHub dispatcher](.github/workflows/drafts.yml), and the [EAS workflow](example/.eas/workflows/publish-draft.yml). Each same-repository PR uploads its exact source commit to EAS Workflows, which publishes the iOS update to `draft-pr-N`. Each update message includes the PR title, and the picker discovers the publication directly from EAS. GitHub does not publish or serve a catalog. Fork PRs do not receive Expo credentials.
+Start with the [consumer setup guide](https://github.com/davidmokos/expo-drafts/blob/main/docs/setup.md) and [app-root templates](https://github.com/davidmokos/expo-drafts/tree/main/templates/app-root). The [workflow guide](https://github.com/davidmokos/expo-drafts/blob/main/docs/workflow.md) also documents this repository's monorepo example. Each same-repository PR uploads its exact source commit to EAS Workflows, which publishes the iOS update to `draft-pr-N`. Each update message includes the PR title, and the picker discovers the publication directly from EAS. GitHub does not publish or serve a catalog. Fork PRs do not receive Expo credentials.
 
 For a manual publication:
 
 ```sh
-eas update --platform ios --channel draft-search --message 'Search redesign' \
-  --environment preview --non-interactive --json > eas-update.json
-
+DRAFTS_ENABLED=1 npx eas-cli@23.2.0 update --platform ios \
+  --channel draft-search --message 'Search redesign' \
+  --environment preview --non-interactive
 ```
 
 Refresh the picker after publishing. EAS enforces your Expo account's project permissions. A successful list stays available in memory while later requests refresh it; signing out or losing project access clears it. Unsupported channel rollouts are reported explicitly rather than choosing an arbitrary branch.
@@ -119,11 +136,13 @@ For existing integrations, an explicitly configured `catalogUrl` still enables t
 
 ## Test app
 
+The following commands are for contributors in this repository, not for installing the package into another app.
+
 `example/` is Drafts Lab, an Expo app linked to `@mokosdavid/expo-drafts-lab`. It uses `@expo/ui` controls with Expo Router's native tab bar and navigation stacks. Library has book details and reading progress, Focus has a timer, Studio has the system color picker, and Settings opens Drafts and shows the running bundle. Its native draft picker reads EAS directly after Expo sign-in.
 
 Each PR changes `example/src/data/preview.ts` to choose its starting tab, sample content, timer defaults, and palette. All screens live in the shared native build, so these preview changes can be published as EAS Updates. Adding or changing native dependencies requires a new compatible build.
 
-PRs #1 through #4 share one native runtime. PR #5 changes `ios.supportsTablet` to `false` and requires a different native build, providing a real native upgrade to try from the picker. The original manual channels remain in EAS with earlier runtimes. See the [validation record](docs/ios-validation.md) for the current builds, exact update IDs, and completed checks.
+PRs #1 through #4 share one native runtime. PR #5 changes `ios.supportsTablet` to `false` and requires a different native build, providing a real native upgrade to try from the picker. The original manual channels remain in EAS with earlier runtimes. See the [validation record](https://github.com/davidmokos/expo-drafts/blob/main/docs/ios-validation.md) for the current builds, exact update IDs, and completed checks.
 
 ```sh
 npm ci
@@ -141,7 +160,7 @@ For a connected physical iPhone, you can compile and install locally from `examp
 npm run ios -- --device "YOUR_IPHONE_NAME"
 ```
 
-The script builds Release without Metro. If the existing profile is managed by Xcode, use Automatic signing on the app target in Xcode. See the [historical iPhone validation notes](docs/ios-validation.md#historical-physical-iphone-validation) for completed local installations of earlier native revisions.
+The script builds Release without Metro. If the existing profile is managed by Xcode, use Automatic signing on the app target in Xcode. See the [historical iPhone validation notes](https://github.com/davidmokos/expo-drafts/blob/main/docs/ios-validation.md#historical-physical-iphone-validation) for completed local installations of earlier native revisions.
 
 For an EAS cloud build, register the device with EAS and build the `drafts-device` profile from `example/`:
 
@@ -150,11 +169,11 @@ eas device:create
 eas build --profile drafts-device --platform ios
 ```
 
-This creates a signed internal Release build. Install it from the EAS build page on a device included in its provisioning profile. The simulator and device profiles use the same native runtime, so both can select the same compatible PR updates. EAS installs the parent package through the example's build hook; see the [workflow guide](docs/workflow.md) for its fingerprint handling.
+This creates a signed internal Release build. Install it from the EAS build page on a device included in its provisioning profile. The simulator and device profiles use the same native runtime, so both can select the same compatible PR updates. EAS installs the parent package through the example's build hook; see the [workflow guide](https://github.com/davidmokos/expo-drafts/blob/main/docs/workflow.md) for its fingerprint handling.
 
 Run `npm test` for catalog, build request, workflow, and plugin validation. Run `bash tests/ios/run.sh` for the iOS cache transactions, exact build matching, installation URL checks, and native request URL round-trip through the CI parser. Native projects in the example are generated by Expo prebuild and are not committed.
 
-See the [iOS validation record](docs/ios-validation.md) for simulator coverage and the published test updates.
+See the [iOS validation record](https://github.com/davidmokos/expo-drafts/blob/main/docs/ios-validation.md) for simulator coverage and the published test updates.
 
 ## Recovery and limits
 
