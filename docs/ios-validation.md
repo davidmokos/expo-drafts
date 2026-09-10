@@ -1,8 +1,45 @@
-# iOS validation, September 8 and 9, 2026
+# iOS validation, September 8–10, 2026
 
 This record covers the native example app and its PR previews, and preserves validation results for earlier runtime revisions. Local simulator validation uses an iPhone 17 Pro Max running iOS 26.3. Native apps are compiled in Release mode with Xcode, and EAS hosts the remote updates.
 
 The app uses Expo SDK 57, React Native 0.86.3, and expo-updates 57.0.21. Its EAS project is [@mokosdavid/expo-drafts-lab](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab), and its bundle identifier is `dev.davidmokos.draftslab`.
+
+## Automatic native builds and installation resume
+
+Commit [`95e9161`](https://github.com/davidmokos/expo-drafts/commit/95e91612963efbf873d7a83219b851dc3d276f7b) adds an independent native-build trigger after successful same-repository PR publication. GitHub verifies the exact publication against its own run metadata and EAS, then serializes native lookup and creation by project, platform, profile, and runtime. The app saves the selected update UUID and channel before opening the iOS installer and resumes it after the matching native build starts.
+
+The package build, lint, example typecheck, all 52 Node tests, and the native suites passed locally and in [main CI](https://github.com/davidmokos/expo-drafts/actions/runs/34412742179). The 13 installation-state test groups include persistence across an actual separate-process exit, exact identity completion, interrupted attempts, legacy records, expiration, and stale callback protection. The final Release simulator app compiled with native runtime `4350b5d2dffa870ff3ef708c18cb8e618b434221`.
+
+The lifecycle test used two separately compiled Release simulator fixtures with explicit runtime overrides for the already-published shared and PR #5 updates. The source fixture retained its pending request across a cold restart without opening an incompatible update. Replacing it with the target fixture without uninstalling automatically opened PR #5's exact remote UUID `01a0876c-3362-72c4-b190-878afb9f2f75` at runtime `7997c404992219f159f865969505cb9be91ad59d`. The native Running details confirmed both values, the saved request was cleared, and a subsequent cold restart kept that update without replaying the installation request. These fixtures test lifecycle and persistence; their overridden runtimes do not establish real native compatibility.
+
+An interrupted-attempt fixture stayed on the bundled version and offered **Open Selected Draft** without automatically retrying. That explicit action opened the exact remote update and cleared the request. A stale UUID instead produced the changed-publication error and retained a retry state while Running stayed on the embedded UUID. Signing out removed both the saved request and EAS rows.
+
+The final app also passed checks without a runtime override. Its picker opened the freshly published Color Studio update `01a08850-f733-760f-a2b9-cbe4bfa4fa9a` at runtime `4350b5d2dffa870ff3ef708c18cb8e618b434221`, with source `d3491b6f0c9fd621cd6235c2d7ec594916ef0cf5`. **Run bundled version** returned to the exact embedded UUID `21f99094-9909-42e3-93c9-6aec1f8f2bb4`. Sign Out removed all EAS rows and the temporary QA Keychain session. Simulator automation servers were stopped after testing. The QA session fixture does not establish a fresh browser sign-in callback.
+
+The new source build must be installed once before this handoff can work. Older source builds did not save an exact publication ID and their existing installation records remain status-only.
+
+### Verified publications and native builds
+
+All five PR publication workflows and package checks passed. Their saved reports match the authenticated EAS workflow outputs and each channel's latest iOS update. PRs #1–4 use runtime `4350b5d2dffa870ff3ef708c18cb8e618b434221`; PR #5 preserves `ios.supportsTablet: false` and uses `e31bf44a823d6aaf1538d5c26cff659b10e562cb`. A stale local Expo installation in PR #2 was corrected with locked dependency installation before publication; no native input or runtime policy was changed.
+
+| PR | Source | Exact iOS update | Successful CI |
+| --- | --- | --- | --- |
+| [#1](https://github.com/davidmokos/expo-drafts/pull/1) | [`9de0ec6`](https://github.com/davidmokos/expo-drafts/commit/9de0ec6c0e2fe5b0797a5f0c24cdd749ae2813a1) | `01a08852-6d90-701f-8406-aa2afbdba802` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08851-2372-7330-84dc-180f73bd403b) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34413014348) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34413014335) |
+| [#2](https://github.com/davidmokos/expo-drafts/pull/2) | [`aebb188`](https://github.com/davidmokos/expo-drafts/commit/aebb188bd0207ce1c355448307520f3310c7997a) | `01a08857-1593-72be-8412-80c5760c683d` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08855-c503-72e0-b33e-9adae981786e) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34413390074) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34413389794) |
+| [#3](https://github.com/davidmokos/expo-drafts/pull/3) | [`64e24ed`](https://github.com/davidmokos/expo-drafts/commit/64e24ed07abe71f3e03607ae1a5f8af0365aeda3) | `01a08852-9d1d-78d5-9bbd-25df39064a39` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08851-562f-7312-99a7-346cb9c8a3a1) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34413014879) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34413014856) |
+| [#4](https://github.com/davidmokos/expo-drafts/pull/4) | [`d3491b6`](https://github.com/davidmokos/expo-drafts/commit/d3491b6f0c9fd621cd6235c2d7ec594916ef0cf5) | `01a08850-f733-760f-a2b9-cbe4bfa4fa9a` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0884f-b393-7625-80d1-64aa8c79ff2d) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34412875938) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34412875935) |
+| [#5](https://github.com/davidmokos/expo-drafts/pull/5) | [`fb2893e`](https://github.com/davidmokos/expo-drafts/commit/fb2893eccc64a0cf06982ef502942a815747a3e3) | `01a08850-eb1d-72e3-9c18-360edf5c3f8f` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a0884f-b0a4-73d1-aa31-7aca128efb68) · [publish](https://github.com/davidmokos/expo-drafts/actions/runs/34412881729) · [checks](https://github.com/davidmokos/expo-drafts/actions/runs/34412881671) |
+
+Successful publication automatically started two native builds. Both EAS lookup jobs found no existing match and the build jobs created exactly one binary per new runtime. No manual native workflow was dispatched. Both signed archives passed strict signature verification, native fingerprint and source checks, and framework dependency verification. Each includes the registered phone and a valid profile expiring July 3, 2027; each contains nine Mach-O images with all 29 required archive dependencies.
+
+| Native build | Source | Embedded update | Successful CI |
+| --- | --- | --- | --- |
+| [Shared, PRs #1–4](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/594833ee-f1e8-47fd-8e2a-2979dcd5c509) | `d3491b6` | `875dcac7-67b2-4fca-8618-f2a02dc173d8` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08852-7bd3-7817-9d12-ddf35a978ac9) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34413094109) |
+| [PR #5, iPhone only](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/builds/9c94f40a-1ac3-40ca-88f6-d2f02086a9be) | `fb2893e` | `c7c4f115-066b-45a6-9241-a23c0565a7fc` | [EAS](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08852-79d1-74ef-a407-4ba8c62b01c6) · [GitHub](https://github.com/davidmokos/expo-drafts/actions/runs/34413104273) |
+
+The later [PR #2 automatic request](https://github.com/davidmokos/expo-drafts/actions/runs/34413620670) succeeded. Its [EAS workflow](https://expo.dev/accounts/mokosdavid/projects/expo-drafts-lab/workflows/01a08858-8110-77c6-ae6f-45f516683acb) returned the existing shared build from `GET_BUILD` and skipped `BUILD`. The reused binary correctly retains PR #4's source commit while matching PR #2's native runtime. Earlier PR #1/#3 pending requests were coalesced by GitHub concurrency; they did not cancel the running build or dispatch extra binaries.
+
+The verified shared build `594833ee-f1e8-47fd-8e2a-2979dcd5c509` was installed successfully on the registered iPhone without uninstalling the app. The attempted launch was denied because the phone was locked. Physical launch and the system-installer handoff to PR #5 remain for the user to try after unlocking; simulator resume checks do not claim a completed physical OTA installation.
 
 ## Publication order and timestamps
 
