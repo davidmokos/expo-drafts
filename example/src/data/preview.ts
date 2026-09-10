@@ -23,9 +23,9 @@ export type Preview = {
 };
 
 export const preview: Preview = {
-  name: 'Native Lab',
-  initialRoute: '/library',
-  tint: '#007AFF',
+  name: 'Focus Timer',
+  initialRoute: '/focus',
+  tint: '#FF9500',
   libraryTitle: 'Library',
   books: [
     {
@@ -56,7 +56,7 @@ export const preview: Preview = {
       favorite: false,
     },
   ],
-  focusTitle: 'Focus',
+  focusTitle: 'Focus Timer',
   focusMinutes: 25,
   breakMinutes: 5,
   studioTitle: 'Studio',
