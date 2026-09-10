@@ -23,9 +23,9 @@ export type Preview = {
 };
 
 export const preview: Preview = {
-  name: 'Native Lab',
-  initialRoute: '/library',
-  tint: '#007AFF',
+  name: 'Color Studio',
+  initialRoute: '/studio',
+  tint: '#B44F32',
   libraryTitle: 'Library',
   books: [
     {
@@ -59,7 +59,7 @@ export const preview: Preview = {
   focusTitle: 'Focus',
   focusMinutes: 25,
   breakMinutes: 5,
-  studioTitle: 'Studio',
-  palette: 'Ocean',
-  colorHex: '#007AFF',
+  studioTitle: 'Color Studio',
+  palette: 'Terracotta',
+  colorHex: '#C56E4D',
 };
