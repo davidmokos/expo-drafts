@@ -1,6 +1,6 @@
 # Set up PR previews in another app
 
-The npm package supplies the native picker. The workflow templates publish each PR to EAS and automatically ensure a compatible iPhone build. Use these templates for an Expo SDK 57 app whose `package.json`, lockfile, app config, and `eas.json` are at the Git repository root. They use npm, Node 24, `expo-drafts@0.1.0`, and EAS CLI 23.2.0. Android support is not included in this release.
+The npm package supplies the native picker. The workflow templates publish each PR to EAS and automatically ensure a compatible iPhone build. Use these templates for an Expo SDK 57 app whose `package.json`, lockfile, app config, and `eas.json` are at the Git repository root. They use npm, Node 24, `expo-drafts@0.1.1`, and EAS CLI 23.2.0. Android support is not included in this release.
 
 ## Install and configure the app
 
@@ -8,7 +8,7 @@ From your app directory:
 
 ```bash
 npx expo install expo-updates
-npm install --save-exact expo-drafts@0.1.0
+npm install --save-exact expo-drafts@0.1.1
 npx eas-cli@23.2.0 init
 ```
 
@@ -57,7 +57,7 @@ cp -n node_modules/expo-drafts/templates/app-root/eas/build-draft.yml .eas/workf
 
 The device profile must use `developmentClient: false`, `distribution: "internal"`, remote credentials, and an iOS `Release` build with `simulator: false`. The optional `drafts-simulator` profile builds a Release simulator app. Neither needs a running Metro server. A development-client or Debug profile is not the preview binary used by these workflows.
 
-Edit `.eas/workflows/build-draft.yml`: replace `com.example.app` in `existing_build.params.app_identifier` with your app's `ios.bundleIdentifier`. Keep the remaining identity names below unchanged for version 0.1.0:
+Edit `.eas/workflows/build-draft.yml`: replace `com.example.app` in `existing_build.params.app_identifier` with your app's `ios.bundleIdentifier`. Keep the remaining identity names below unchanged for version 0.1.1:
 
 | Setting                                        | Required value                                     |
 | ---------------------------------------------- | -------------------------------------------------- |
@@ -103,7 +103,7 @@ Use active channels that route to one branch. Branch rollouts, update rollouts, 
 
 A successful PR publication starts an independent native `workflow_run`. Trusted helpers validate the GitHub event and artifact against EAS, then serialize lookup/build jobs by project, platform, profile, and runtime. EAS reuses a completed compatible build, waits for a running match, or builds once when absent. A later compatible PR does not cancel the running build. GitHub may replace an older pending duplicate with the latest request.
 
-The trusted helpers install separately from the app at pinned version 0.1.0 with lifecycle scripts disabled and remain outside its source archive. EAS workflow files come from the default-branch checkout, then are copied into the app's `.eas/workflows` directory and uploaded with its source. The workflow uploads local source, so no Expo GitHub App installation is required. Avoid enabling a second publisher for the same PR channels.
+The trusted helpers install separately from the app at pinned version 0.1.1 with lifecycle scripts disabled and remain outside its source archive. EAS workflow files come from the default-branch checkout, then are copied into the app's `.eas/workflows` directory and uploaded with its source. The workflow uploads local source, so no Expo GitHub App installation is required. Avoid enabling a second publisher for the same PR channels.
 
 Fork PRs do not receive the Expo secret or start builds. Same-repository contributors can execute app code with CI access, so reserve branch write permission for trusted people and coding agents. Manual publication remains available in Actions, but only PR publications trigger automatic native builds. Use the manual native workflow or **Request Build** for a manually published preview.
 

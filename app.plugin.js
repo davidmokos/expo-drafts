@@ -115,5 +115,5 @@ function withExpoDrafts(config, options = {}) {
   });
 }
 
-module.exports = createRunOncePlugin(withExpoDrafts, 'expo-drafts', '0.1.0');
+module.exports = createRunOncePlugin(withExpoDrafts, 'expo-drafts', '0.1.1');
 module.exports.withExpoDrafts = withExpoDrafts;
