@@ -23,10 +23,10 @@ export type Preview = {
 };
 
 export const preview: Preview = {
-  name: 'Native Lab',
+  name: 'iPhone Native Preview',
   initialRoute: '/library',
-  tint: '#007AFF',
-  libraryTitle: 'Library',
+  tint: '#5856D6',
+  libraryTitle: 'iPhone Library',
   books: [
     {
       id: 'creative-act',
