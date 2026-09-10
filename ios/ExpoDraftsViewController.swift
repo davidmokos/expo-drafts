@@ -331,23 +331,26 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     let current = manager.isCurrent(draft)
     let downloading = loadingDraftID == draft.id
     let preparingBuild = preparingBuildID == draft.id
-    let subtitle: String
-    if preparingBuild { subtitle = "Preparing installation…" }
-    else if downloading { subtitle = "Downloading…" }
+    let identity = draft.gitCommitHash.flatMap { $0.isEmpty ? nil : String($0.prefix(7)) }
+      .map { "\(draft.channel) · \($0)" } ?? draft.channel
+    let status: String?
+    if preparingBuild { status = "Preparing installation…" }
+    else if downloading { status = "Downloading…" }
     else if reason != nil {
-      subtitle = buildSubtitle(for: draft)
+      status = buildSubtitle(for: draft)
     } else {
-      subtitle = draft.pullRequest.map { "PR #\($0.number)" } ?? draft.channel
+      status = nil
     }
     let publication = draft.publicationDate.map {
       "Published \(DateFormatter.localizedString(from: $0, dateStyle: .medium, timeStyle: .medium))"
     } ?? "Publication time unavailable"
+    let details = [identity, status, publication].compactMap { $0 }
 
     var content = cell.defaultContentConfiguration()
     content.text = draft.name
     content.textProperties.numberOfLines = 2
     content.textProperties.color = reason == nil ? .label : .secondaryLabel
-    content.secondaryText = "\(subtitle)\n\(publication)"
+    content.secondaryText = details.joined(separator: "\n")
     content.secondaryTextProperties.numberOfLines = 0
     cell.contentConfiguration = content
     cell.accessoryType = current ? .checkmark : (reason != nil && draft.iosUpdate != nil ? .disclosureIndicator : .none)
@@ -360,7 +363,7 @@ final class DraftsViewController: UITableViewController, UISearchResultsUpdating
     }
     let selectable = !busy && (reason == nil || draft.iosUpdate != nil)
     cell.selectionStyle = selectable ? .default : .none
-    cell.accessibilityLabel = "\(draft.name), \(subtitle), \(publication)"
+    cell.accessibilityLabel = ([draft.name] + details).joined(separator: ", ")
     cell.accessibilityValue = current ? "Current update" : nil
     cell.accessibilityHint = reason != nil && draft.iosUpdate != nil ? "Shows build options. This update cannot run in the installed native build." : nil
     cell.accessibilityTraits = selectable ? [.button] : [.button, .notEnabled]
