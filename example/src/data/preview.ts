@@ -23,10 +23,10 @@ export type Preview = {
 };
 
 export const preview: Preview = {
-  name: 'Native Lab',
+  name: 'PR Workflow',
   initialRoute: '/library',
-  tint: '#007AFF',
-  libraryTitle: 'Library',
+  tint: '#AF52DE',
+  libraryTitle: 'PR Library',
   books: [
     {
       id: 'creative-act',
